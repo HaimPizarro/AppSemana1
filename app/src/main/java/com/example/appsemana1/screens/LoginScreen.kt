@@ -18,6 +18,8 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import android.content.res.Configuration
+import androidx.compose.ui.tooling.preview.Preview
 
 @Composable
 fun LoginScreen(
@@ -44,7 +46,6 @@ fun LoginScreen(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center
         ) {
-            // Logo o Icono
             Icon(
                 Icons.Default.Person,
                 contentDescription = "Logo",
@@ -54,7 +55,6 @@ fun LoginScreen(
                 tint = MaterialTheme.colorScheme.primary
             )
 
-            // Título
             Text(
                 text = "Bienvenido",
                 fontSize = 32.sp,
@@ -70,7 +70,6 @@ fun LoginScreen(
                 modifier = Modifier.padding(bottom = 32.dp)
             )
 
-            // Campo de Email
             OutlinedTextField(
                 value = email,
                 onValueChange = {
@@ -92,7 +91,6 @@ fun LoginScreen(
                 isError = showError
             )
 
-            // Campo de Contraseña
             OutlinedTextField(
                 value = password,
                 onValueChange = {
@@ -132,7 +130,6 @@ fun LoginScreen(
                 isError = showError
             )
 
-            // Mensaje de error
             if (showError) {
                 Text(
                     text = errorMessage,
@@ -142,7 +139,6 @@ fun LoginScreen(
                 )
             }
 
-            // Texto de "Olvidaste tu contraseña"
             TextButton(
                 onClick = onNavigateToForgotPassword,
                 modifier = Modifier
@@ -152,10 +148,8 @@ fun LoginScreen(
                 Text("¿Olvidaste tu contraseña?")
             }
 
-            // Botón de Login
             Button(
                 onClick = {
-                    // Validación del formulario
                     when {
                         email.isEmpty() -> {
                             showError = true
@@ -174,7 +168,6 @@ fun LoginScreen(
                             errorMessage = "La contraseña debe tener al menos 6 caracteres"
                         }
                         else -> {
-                            // Login exitoso
                             showError = false
                             errorMessage = ""
                             onLoginSuccess()
@@ -196,7 +189,6 @@ fun LoginScreen(
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // Botón de Registro
             OutlinedButton(
                 onClick = onNavigateToRegister,
                 modifier = Modifier
@@ -210,73 +202,18 @@ fun LoginScreen(
                     fontWeight = FontWeight.Medium
                 )
             }
-
-            // Divisor con texto
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(vertical = 24.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                HorizontalDivider(
-                    modifier = Modifier
-                        .weight(1f)
-                        .padding(end = 8.dp)
-                )
-                Text(
-                    text = "O continúa con",
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    fontSize = 14.sp
-                )
-                HorizontalDivider(
-                    modifier = Modifier
-                        .weight(1f)
-                        .padding(start = 8.dp)
-                )
-            }
-
-            // Botones de redes sociales
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.Center
-            ) {
-                OutlinedIconButton(
-                    onClick = { },
-                    modifier = Modifier.size(56.dp)
-                ) {
-                    Icon(
-                        Icons.Default.Email,
-                        contentDescription = "Google",
-                        modifier = Modifier.size(24.dp)
-                    )
-                }
-
-                Spacer(modifier = Modifier.width(16.dp))
-
-                OutlinedIconButton(
-                    onClick = { },
-                    modifier = Modifier.size(56.dp)
-                ) {
-                    Icon(
-                        Icons.Default.Person,
-                        contentDescription = "Facebook",
-                        modifier = Modifier.size(24.dp)
-                    )
-                }
-
-                Spacer(modifier = Modifier.width(16.dp))
-
-                OutlinedIconButton(
-                    onClick = { },
-                    modifier = Modifier.size(56.dp)
-                ) {
-                    Icon(
-                        Icons.Default.Send,
-                        contentDescription = "Twitter",
-                        modifier = Modifier.size(24.dp)
-                    )
-                }
-            }
         }
+    }
+}
+
+@Preview(name = "Login", showBackground = true, widthDp = 360, heightDp = 720)
+@Composable
+fun LoginScreen_Preview() {
+    MaterialTheme {
+        LoginScreen(
+            onNavigateToRegister = {},
+            onNavigateToForgotPassword = {},
+            onLoginSuccess = {}
+        )
     }
 }

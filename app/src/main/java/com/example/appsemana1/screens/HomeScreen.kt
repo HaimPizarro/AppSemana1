@@ -1,6 +1,7 @@
 package com.example.appsemana1.screens
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -18,41 +19,57 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.tooling.preview.Preview
+
+enum class MealType { DESAYUNO, ALMUERZO, CENA }
+
+data class Ingredient(val name: String, val qty: String)
+data class Recipe(
+    val id: String,
+    val title: String,
+    val minutes: Int,
+    val type: MealType,
+    val tags: List<String> = emptyList(),
+    val ingredients: List<Ingredient> = emptyList()
+)
+data class DayPlan(val day: String, val breakfast: Recipe? = null, val lunch: Recipe? = null, val dinner: Recipe? = null)
+data class WeekPlan(val days: List<DayPlan>)
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun HomeScreen(
-    onLogout: () -> Unit
-) {
-    var selectedTab by remember { mutableStateOf(0) }
+fun HomeScreen(onLogout: () -> Unit) {
+    var tab by remember { mutableStateOf(0) }
+    var week by remember {
+        mutableStateOf(
+            WeekPlan(listOf("Lunes","Martes","Miércoles","Jueves","Viernes","Sábado","Domingo").map { DayPlan(it) })
+        )
+    }
+    val recipes = remember {
+        listOf(
+            Recipe("r1","Avena con fruta",10,MealType.DESAYUNO, listOf("Rápido"), listOf(Ingredient("Avena","1/2 tz"), Ingredient("Leche","1 tz"))),
+            Recipe("r2","Panqueques de avena",15,MealType.DESAYUNO, listOf("Económico"), listOf(Ingredient("Avena","1 tz"), Ingredient("Huevo","1 un"))),
+            Recipe("r3","Pollo con ensalada",25,MealType.ALMUERZO, listOf("Rápido"), listOf(Ingredient("Pollo","1 pechuga"), Ingredient("Lechuga","2 tz"))),
+            Recipe("r4","Porotos con rienda",45,MealType.ALMUERZO, listOf("Económico"), listOf(Ingredient("Porotos","1 tz"), Ingredient("Tallarin","1 tz"))),
+            Recipe("r5","Tortilla de verduras",20,MealType.CENA, listOf("Vegetariano"), listOf(Ingredient("Huevo","3 un"), Ingredient("Cebolla","1/2 un"))),
+            Recipe("r6","Sopa de verduras",30,MealType.CENA, listOf("Ligero"), listOf(Ingredient("Zanahoria","1 un"), Ingredient("Papa","1 un")))
+        )
+    }
+    val shopping by derivedStateOf {
+        val map = linkedMapOf<String, MutableList<String>>()
+        week.days.forEach { d ->
+            listOfNotNull(d.breakfast, d.lunch, d.dinner).forEach { r ->
+                r.ingredients.forEach { i -> map.getOrPut(i.name) { mutableListOf() }.add(i.qty) }
+            }
+        }
+        map.map { (k, v) -> Ingredient(k, v.joinToString(" + ")) }
+    }
 
     Scaffold(
         topBar = {
             TopAppBar(
-                title = {
-                    Text(
-                        "Mi Aplicación",
-                        fontWeight = FontWeight.Bold
-                    )
-                },
+                title = { Text("Minuta Semanal", fontWeight = FontWeight.Bold) },
                 actions = {
-                    IconButton(onClick = { /* Notificaciones */ }) {
-                        Badge(
-                            containerColor = MaterialTheme.colorScheme.error
-                        ) {
-                            Text("3", fontSize = 10.sp)
-                        }
-                        Icon(
-                            Icons.Default.Notifications,
-                            contentDescription = "Notificaciones"
-                        )
-                    }
-                    IconButton(onClick = onLogout) {
-                        Icon(
-                            Icons.Default.ExitToApp,
-                            contentDescription = "Cerrar Sesión"
-                        )
-                    }
+                    IconButton(onClick = onLogout) { Icon(Icons.Default.ExitToApp, contentDescription = null) }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = MaterialTheme.colorScheme.primaryContainer,
@@ -62,241 +79,250 @@ fun HomeScreen(
         },
         bottomBar = {
             NavigationBar {
-                NavigationBarItem(
-                    selected = selectedTab == 0,
-                    onClick = { selectedTab = 0 },
-                    icon = { Icon(Icons.Default.Home, contentDescription = "Inicio") },
-                    label = { Text("Inicio") }
-                )
-                NavigationBarItem(
-                    selected = selectedTab == 1,
-                    onClick = { selectedTab = 1 },
-                    icon = { Icon(Icons.Default.Search, contentDescription = "Buscar") },
-                    label = { Text("Buscar") }
-                )
-                NavigationBarItem(
-                    selected = selectedTab == 2,
-                    onClick = { selectedTab = 2 },
-                    icon = { Icon(Icons.Default.Person, contentDescription = "Perfil") },
-                    label = { Text("Perfil") }
-                )
+                NavigationBarItem(selected = tab == 0, onClick = { tab = 0 }, icon = { Icon(Icons.Default.CalendarToday, null) }, label = { Text("Semana") })
+                NavigationBarItem(selected = tab == 1, onClick = { tab = 1 }, icon = { Icon(Icons.Default.Search, null) }, label = { Text("Recetas") })
+                NavigationBarItem(selected = tab == 2, onClick = { tab = 2 }, icon = { Icon(Icons.Default.ListAlt, null) }, label = { Text("Lista") })
+                NavigationBarItem(selected = tab == 3, onClick = { tab = 3 }, icon = { Icon(Icons.Default.Person, null) }, label = { Text("Perfil") })
             }
         },
         floatingActionButton = {
-            if (selectedTab == 0) {
-                FloatingActionButton(
-                    onClick = { /* Acción del FAB */ },
-                    containerColor = MaterialTheme.colorScheme.primary
-                ) {
-                    Icon(Icons.Default.Add, contentDescription = "Agregar")
-                }
+            if (tab == 0) {
+                ExtendedFloatingActionButton(
+                    onClick = {
+                        val b = recipes.filter { it.type == MealType.DESAYUNO }
+                        val l = recipes.filter { it.type == MealType.ALMUERZO }
+                        val c = recipes.filter { it.type == MealType.CENA }
+                        week = week.copy(
+                            days = week.days.mapIndexed { i, d ->
+                                d.copy(
+                                    breakfast = b.getOrNull(i % maxOf(1, b.size)),
+                                    lunch = l.getOrNull(i % maxOf(1, l.size)),
+                                    dinner = c.getOrNull(i % maxOf(1, c.size))
+                                )
+                            }
+                        )
+                    },
+                    icon = { Icon(Icons.Default.AutoAwesome, null) },
+                    text = { Text("Generar semana") }
+                )
             }
         }
-    ) { paddingValues ->
-        when (selectedTab) {
-            0 -> HomeContent(paddingValues)
-            1 -> SearchContent(paddingValues)
-            2 -> ProfileContent(paddingValues)
+    ) { pv ->
+        when (tab) {
+            0 -> WeekTab(pv, week, recipes) { week = it }
+            1 -> RecipesTab(pv, recipes)
+            2 -> ShoppingTab(pv, shopping)
+            3 -> ProfileTab(pv)
         }
     }
 }
 
 @Composable
-fun HomeContent(paddingValues: PaddingValues) {
+fun WeekTab(pv: PaddingValues, plan: WeekPlan, recipes: List<Recipe>, onChange: (WeekPlan) -> Unit) {
+    var picker by remember { mutableStateOf<Triple<Int, MealType, Boolean>?>(null) }
     LazyColumn(
         modifier = Modifier
             .fillMaxSize()
-            .padding(paddingValues),
+            .padding(pv),
         contentPadding = PaddingValues(16.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp)
+        verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
-        // Header Card
         item {
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(16.dp),
-                colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.primaryContainer
-                )
-            ) {
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(20.dp)
-                ) {
-                    Text(
-                        text = "¡Bienvenido de vuelta!",
-                        fontSize = 24.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onPrimaryContainer
-                    )
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Text(
-                        text = "Tienes 5 tareas pendientes hoy",
-                        fontSize = 16.sp,
-                        color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.8f)
-                    )
-                    Spacer(modifier = Modifier.height(16.dp))
-                    Button(
-                        onClick = { },
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = MaterialTheme.colorScheme.primary
-                        )
-                    ) {
-                        Text("Ver tareas")
-                    }
+            Text("Elige tus recetas por día", fontSize = 20.sp, fontWeight = FontWeight.Bold)
+        }
+        items(plan.days.size) { idx ->
+            val d = plan.days[idx]
+            Card(shape = RoundedCornerShape(16.dp)) {
+                Column(Modifier.fillMaxWidth().padding(16.dp)) {
+                    Text(d.day, fontWeight = FontWeight.Bold, fontSize = 18.sp)
+                    Spacer(Modifier.height(10.dp))
+                    MealRow("Desayuno", d.breakfast, Icons.Default.WbSunny) { picker = Triple(idx, MealType.DESAYUNO, true) }
+                    Spacer(Modifier.height(8.dp))
+                    MealRow("Almuerzo", d.lunch, Icons.Default.LunchDining) { picker = Triple(idx, MealType.ALMUERZO, true) }
+                    Spacer(Modifier.height(8.dp))
+                    MealRow("Cena", d.dinner, Icons.Default.Nightlight) { picker = Triple(idx, MealType.CENA, true) }
                 }
             }
         }
-
-        // Stats Row
-        item {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(16.dp)
-            ) {
-                StatsCard(
-                    modifier = Modifier.weight(1f),
-                    icon = Icons.Default.CheckCircle,
-                    title = "Completadas",
-                    value = "28",
-                    color = MaterialTheme.colorScheme.primary
-                )
-                StatsCard(
-                    modifier = Modifier.weight(1f),
-                    icon = Icons.Default.Schedule,
-                    title = "En progreso",
-                    value = "12",
-                    color = MaterialTheme.colorScheme.secondary
-                )
-            }
-        }
-
-        // Section Title
-        item {
-            Text(
-                text = "Actividad Reciente",
-                fontSize = 20.sp,
-                fontWeight = FontWeight.Bold,
-                modifier = Modifier.padding(vertical = 8.dp)
-            )
-        }
-
-        // Activity List
-        val activities = listOf(
-            Activity("Proyecto Alpha", "Completado hace 2 horas", Icons.Default.Done, true),
-            Activity("Reunión con equipo", "En 30 minutos", Icons.Default.Groups, false),
-            Activity("Revisar documentos", "Pendiente", Icons.Default.Description, false),
-            Activity("Llamada con cliente", "Completado ayer", Icons.Default.Call, true),
-            Activity("Actualizar informe", "En progreso", Icons.Default.Edit, false)
-        )
-
-        items(activities) { activity ->
-            ActivityCard(activity)
-        }
-
-        // Quick Actions Section
-        item {
-            Text(
-                text = "Acciones Rápidas",
-                fontSize = 20.sp,
-                fontWeight = FontWeight.Bold,
-                modifier = Modifier.padding(top = 16.dp, bottom = 8.dp)
-            )
-        }
-
-        item {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                QuickActionButton(
-                    modifier = Modifier.weight(1f),
-                    icon = Icons.Default.Add,
-                    label = "Nueva Tarea"
-                )
-                QuickActionButton(
-                    modifier = Modifier.weight(1f),
-                    icon = Icons.Default.CalendarToday,
-                    label = "Calendario"
-                )
-                QuickActionButton(
-                    modifier = Modifier.weight(1f),
-                    icon = Icons.Default.BarChart,
-                    label = "Reportes"
-                )
-            }
-        }
     }
-}
-
-@Composable
-fun SearchContent(paddingValues: PaddingValues) {
-    var searchQuery by remember { mutableStateOf("") }
-
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(paddingValues)
-            .padding(16.dp)
-    ) {
-        // Search Bar
-        OutlinedTextField(
-            value = searchQuery,
-            onValueChange = { searchQuery = it },
-            modifier = Modifier.fillMaxWidth(),
-            placeholder = { Text("Buscar...") },
-            leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
-            trailingIcon = {
-                if (searchQuery.isNotEmpty()) {
-                    IconButton(onClick = { searchQuery = "" }) {
-                        Icon(Icons.Default.Clear, contentDescription = "Limpiar")
+    val p = picker
+    if (p != null && p.third) {
+        val options = recipes.filter { it.type == p.second }
+        AlertDialog(
+            onDismissRequest = { picker = null },
+            title = { Text("Elegir receta") },
+            text = {
+                LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    items(options) { r ->
+                        ElevatedCard(
+                            onClick = {
+                                val days = plan.days.toMutableList()
+                                val d0 = days[p.first]
+                                days[p.first] = when (p.second) {
+                                    MealType.DESAYUNO -> d0.copy(breakfast = r)
+                                    MealType.ALMUERZO -> d0.copy(lunch = r)
+                                    MealType.CENA -> d0.copy(dinner = r)
+                                }
+                                onChange(plan.copy(days = days))
+                                picker = null
+                            },
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Row(Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
+                                Icon(
+                                    when (r.type) {
+                                        MealType.DESAYUNO -> Icons.Default.WbSunny
+                                        MealType.ALMUERZO -> Icons.Default.LunchDining
+                                        MealType.CENA -> Icons.Default.Nightlight
+                                    },
+                                    null
+                                )
+                                Spacer(Modifier.width(10.dp))
+                                Column(Modifier.weight(1f)) {
+                                    Text(r.title, fontWeight = FontWeight.SemiBold)
+                                    Text("${r.minutes} min • ${r.tags.joinToString()}", fontSize = 12.sp)
+                                }
+                                Icon(Icons.Default.CheckCircle, null)
+                            }
+                        }
                     }
                 }
             },
-            shape = RoundedCornerShape(12.dp),
-            singleLine = true
+            confirmButton = { TextButton(onClick = { picker = null }) { Text("Cerrar") } }
         )
+    }
+}
 
-        Spacer(modifier = Modifier.height(24.dp))
-
-        // Categorías de búsqueda
-        Text(
-            text = "Categorías",
-            fontSize = 18.sp,
-            fontWeight = FontWeight.Bold,
-            modifier = Modifier.padding(bottom = 12.dp)
-        )
-
-        LazyColumn(
-            verticalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            item {
-                CategoryCard("Documentos", Icons.Default.Folder, "24 elementos")
+@Composable
+fun MealRow(label: String, recipe: Recipe?, icon: ImageVector, onPick: () -> Unit) {
+    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+        Text(label, modifier = Modifier.weight(0.8f), fontWeight = FontWeight.SemiBold)
+        if (recipe == null) {
+            OutlinedButton(onClick = onPick, modifier = Modifier.weight(1.2f)) {
+                Icon(Icons.Default.Add, null)
+                Spacer(Modifier.width(6.dp))
+                Text("Elegir receta")
             }
-            item {
-                CategoryCard("Imágenes", Icons.Default.Image, "156 elementos")
-            }
-            item {
-                CategoryCard("Videos", Icons.Default.PlayArrow, "8 elementos")
-            }
-            item {
-                CategoryCard("Contactos", Icons.Default.Contacts, "89 elementos")
+        } else {
+            Column(
+                modifier = Modifier
+                    .weight(1.2f)
+                    .clip(RoundedCornerShape(10.dp))
+                    .background(MaterialTheme.colorScheme.surfaceVariant)
+                    .clickable { onPick() }
+                    .padding(12.dp)
+            ) {
+                Text(recipe.title, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Spacer(Modifier.height(4.dp))
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(icon, null, modifier = Modifier.size(16.dp))
+                    Spacer(Modifier.width(4.dp))
+                    Text("${recipe.minutes} min", fontSize = 12.sp)
+                }
             }
         }
     }
 }
 
 @Composable
-fun ProfileContent(paddingValues: PaddingValues) {
+fun RecipesTab(pv: PaddingValues, recipes: List<Recipe>) {
+    var q by remember { mutableStateOf("") }
+    var t by remember { mutableStateOf<MealType?>(null) }
+    val filtered = recipes.filter { (t == null || it.type == t) && (q.isBlank() || it.title.lowercase().contains(q.lowercase())) }
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .padding(paddingValues)
+            .padding(pv)
+            .padding(16.dp)
+    ) {
+        OutlinedTextField(
+            value = q,
+            onValueChange = { q = it },
+            modifier = Modifier.fillMaxWidth(),
+            placeholder = { Text("Buscar receta") },
+            leadingIcon = { Icon(Icons.Default.Search, null) },
+            singleLine = true,
+            shape = RoundedCornerShape(12.dp)
+        )
+        Spacer(Modifier.height(12.dp))
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            FilterChip(selected = t == null, onClick = { t = null }, label = { Text("Todos") })
+            FilterChip(selected = t == MealType.DESAYUNO, onClick = { t = MealType.DESAYUNO }, label = { Text("Desayuno") })
+            FilterChip(selected = t == MealType.ALMUERZO, onClick = { t == MealType.ALMUERZO }, label = { Text("Almuerzo") })
+            FilterChip(selected = t == MealType.CENA, onClick = { t = MealType.CENA }, label = { Text("Cena") })
+        }
+        Spacer(Modifier.height(16.dp))
+        LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            items(filtered) { r ->
+                Card(onClick = {}, shape = RoundedCornerShape(12.dp)) {
+                    Column(Modifier.fillMaxWidth().padding(16.dp)) {
+                        Text(r.title, fontWeight = FontWeight.SemiBold, fontSize = 16.sp)
+                        Spacer(Modifier.height(6.dp))
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(Icons.Default.Timer, null, modifier = Modifier.size(16.dp))
+                            Spacer(Modifier.width(4.dp))
+                            Text("${r.minutes} min", fontSize = 12.sp)
+                        }
+                        Spacer(Modifier.height(6.dp))
+                        Text(r.tags.joinToString(" • "), color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 12.sp)
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun ShoppingTab(pv: PaddingValues, items: List<Ingredient>) {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(pv)
+            .padding(16.dp)
+    ) {
+        Text("Lista de compras", fontSize = 20.sp, fontWeight = FontWeight.Bold)
+        Spacer(Modifier.height(8.dp))
+        if (items.isEmpty()) {
+            Text("Agrega recetas para ver los ingredientes.")
+        } else {
+            LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                items(items) { ing ->
+                    Card(shape = RoundedCornerShape(12.dp)) {
+                        Row(
+                            Modifier
+                                .fillMaxWidth()
+                                .padding(14.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Box(
+                                Modifier
+                                    .size(32.dp)
+                                    .clip(CircleShape)
+                                    .background(MaterialTheme.colorScheme.primaryContainer),
+                                contentAlignment = Alignment.Center
+                            ) { Icon(Icons.Default.Checklist, null) }
+                            Spacer(Modifier.width(12.dp))
+                            Column {
+                                Text(ing.name, fontWeight = FontWeight.SemiBold)
+                                Text(ing.qty, fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun ProfileTab(pv: PaddingValues) {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(pv)
             .padding(16.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        // Profile Header
         Box(
             modifier = Modifier
                 .size(100.dp)
@@ -304,312 +330,24 @@ fun ProfileContent(paddingValues: PaddingValues) {
                 .background(MaterialTheme.colorScheme.primaryContainer),
             contentAlignment = Alignment.Center
         ) {
-            Icon(
-                Icons.Default.Person,
-                contentDescription = null,
-                modifier = Modifier.size(50.dp),
-                tint = MaterialTheme.colorScheme.onPrimaryContainer
-            )
+            Icon(Icons.Default.Person, null, modifier = Modifier.size(50.dp), tint = MaterialTheme.colorScheme.onPrimaryContainer)
         }
-
-        Spacer(modifier = Modifier.height(16.dp))
-
-        Text(
-            text = "Usuario Demo",
-            fontSize = 24.sp,
-            fontWeight = FontWeight.Bold
-        )
-
-        Text(
-            text = "usuario@ejemplo.com",
-            fontSize = 16.sp,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
-
-        Spacer(modifier = Modifier.height(32.dp))
-
-        // Profile Stats
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceEvenly
-        ) {
-            ProfileStat("Proyectos", "12")
-            ProfileStat("Tareas", "48")
-            ProfileStat("Logros", "7")
-        }
-
-        Spacer(modifier = Modifier.height(32.dp))
-
-        // Profile Options
-        ProfileOptionItem(
-            icon = Icons.Default.Settings,
-            title = "Configuración",
-            onClick = { }
-        )
-        ProfileOptionItem(
-            icon = Icons.Default.Notifications,
-            title = "Notificaciones",
-            onClick = { }
-        )
-        ProfileOptionItem(
-            icon = Icons.Default.Security,
-            title = "Privacidad",
-            onClick = { }
-        )
-        ProfileOptionItem(
-            icon = Icons.Default.Help,
-            title = "Ayuda",
-            onClick = { }
-        )
-        ProfileOptionItem(
-            icon = Icons.Default.Info,
-            title = "Acerca de",
-            onClick = { }
-        )
-    }
-}
-
-// Componentes auxiliares
-data class Activity(
-    val title: String,
-    val subtitle: String,
-    val icon: ImageVector,
-    val isCompleted: Boolean
-)
-
-@Composable
-fun StatsCard(
-    modifier: Modifier = Modifier,
-    icon: ImageVector,
-    title: String,
-    value: String,
-    color: androidx.compose.ui.graphics.Color
-) {
-    Card(
-        modifier = modifier,
-        shape = RoundedCornerShape(12.dp)
-    ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-            Icon(
-                icon,
-                contentDescription = null,
-                tint = color,
-                modifier = Modifier.size(32.dp)
-            )
-            Spacer(modifier = Modifier.height(8.dp))
-            Text(
-                text = value,
-                fontSize = 24.sp,
-                fontWeight = FontWeight.Bold
-            )
-            Text(
-                text = title,
-                fontSize = 14.sp,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-        }
-    }
-}
-
-@Composable
-fun ActivityCard(activity: Activity) {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(12.dp)
-    ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Box(
-                modifier = Modifier
-                    .size(48.dp)
-                    .clip(CircleShape)
-                    .background(
-                        if (activity.isCompleted)
-                            MaterialTheme.colorScheme.primaryContainer
-                        else
-                            MaterialTheme.colorScheme.surfaceVariant
-                    ),
-                contentAlignment = Alignment.Center
-            ) {
-                Icon(
-                    activity.icon,
-                    contentDescription = null,
-                    tint = if (activity.isCompleted)
-                        MaterialTheme.colorScheme.primary
-                    else
-                        MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
-
-            Spacer(modifier = Modifier.width(16.dp))
-
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = activity.title,
-                    fontWeight = FontWeight.Medium,
-                    fontSize = 16.sp
-                )
-                Text(
-                    text = activity.subtitle,
-                    fontSize = 14.sp,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
-
-            if (activity.isCompleted) {
-                Icon(
-                    Icons.Default.CheckCircle,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.primary
-                )
-            } else {
-                Icon(
-                    Icons.Default.KeyboardArrowRight,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant
-                )
+        Spacer(Modifier.height(12.dp))
+        Text("Dueña de casa", fontSize = 22.sp, fontWeight = FontWeight.Bold)
+        Text("perfil@ejemplo.com", color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Spacer(Modifier.height(24.dp))
+        Card(onClick = {}, shape = RoundedCornerShape(12.dp)) {
+            Row(Modifier.fillMaxWidth().padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
+                Icon(Icons.Default.Settings, null)
+                Spacer(Modifier.width(12.dp))
+                Text("Preferencias de recetas")
             }
         }
     }
 }
 
+@Preview(name = "Home", showBackground = true, widthDp = 360, heightDp = 720)
 @Composable
-fun QuickActionButton(
-    modifier: Modifier = Modifier,
-    icon: ImageVector,
-    label: String
-) {
-    OutlinedCard(
-        modifier = modifier,
-        shape = RoundedCornerShape(12.dp)
-    ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-            Icon(
-                icon,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.primary,
-                modifier = Modifier.size(24.dp)
-            )
-            Spacer(modifier = Modifier.height(4.dp))
-            Text(
-                text = label,
-                fontSize = 12.sp,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
-            )
-        }
-    }
-}
-
-@Composable
-fun CategoryCard(
-    title: String,
-    icon: ImageVector,
-    count: String
-) {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(12.dp)
-    ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Icon(
-                icon,
-                contentDescription = null,
-                modifier = Modifier.size(32.dp),
-                tint = MaterialTheme.colorScheme.primary
-            )
-            Spacer(modifier = Modifier.width(16.dp))
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = title,
-                    fontSize = 16.sp,
-                    fontWeight = FontWeight.Medium
-                )
-                Text(
-                    text = count,
-                    fontSize = 14.sp,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
-            Icon(
-                Icons.Default.KeyboardArrowRight,
-                contentDescription = null
-            )
-        }
-    }
-}
-
-@Composable
-fun ProfileStat(label: String, value: String) {
-    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-        Text(
-            text = value,
-            fontSize = 24.sp,
-            fontWeight = FontWeight.Bold,
-            color = MaterialTheme.colorScheme.primary
-        )
-        Text(
-            text = label,
-            fontSize = 14.sp,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
-    }
-}
-
-@Composable
-fun ProfileOptionItem(
-    icon: ImageVector,
-    title: String,
-    onClick: () -> Unit
-) {
-    Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = 4.dp),
-        shape = RoundedCornerShape(12.dp),
-        onClick = onClick
-    ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Icon(
-                icon,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.primary
-            )
-            Spacer(modifier = Modifier.width(16.dp))
-            Text(
-                text = title,
-                fontSize = 16.sp,
-                modifier = Modifier.weight(1f)
-            )
-            Icon(
-                Icons.Default.KeyboardArrowRight,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-        }
-    }
+fun HomeScreen_Preview() {
+    MaterialTheme { HomeScreen(onLogout = {}) }
 }
