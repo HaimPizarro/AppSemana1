@@ -29,7 +29,8 @@ import kotlinx.coroutines.launch
 @Composable
 fun ForgotPasswordScreen(
     onNavigateBack: () -> Unit,
-    onNavigateToLogin: () -> Unit
+    onNavigateToLogin: () -> Unit,
+    accessibilityViewModel: com.example.appsemana1.ui.theme.AccessibilityViewModel
 ) {
     var email by remember { mutableStateOf("") }
     var showError by remember { mutableStateOf(false) }

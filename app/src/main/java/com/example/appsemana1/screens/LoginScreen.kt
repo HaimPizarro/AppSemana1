@@ -1,5 +1,6 @@
 package com.example.appsemana1.screens
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -7,161 +8,267 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.*
-import androidx.compose.material3.*
+import androidx.compose.material.icons.filled.Email
+import androidx.compose.material.icons.filled.Error
+import androidx.compose.material.icons.filled.Lock
+import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.Visibility
+import androidx.compose.material.icons.filled.VisibilityOff
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import android.content.res.Configuration
-import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.zIndex
+import com.example.appsemana1.ui.theme.AccessibilityViewModel
+import com.example.appsemana1.ui.theme.LocalAccessibilitySettings
+import com.example.appsemana1.ui.theme.rememberAccessibilityManager
 
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalComposeUiApi::class)
 @Composable
 fun LoginScreen(
     onNavigateToRegister: () -> Unit,
     onNavigateToForgotPassword: () -> Unit,
-    onLoginSuccess: () -> Unit
+    onLoginSuccess: () -> Unit,
+    accessibilityViewModel: AccessibilityViewModel
 ) {
+    // Estado local de formulario
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     var passwordVisible by remember { mutableStateOf(false) }
     var showError by remember { mutableStateOf(false) }
     var errorMessage by remember { mutableStateOf("") }
 
+    // Accesibilidad global
+    val settings = LocalAccessibilitySettings.current
+    val manager = rememberAccessibilityManager()
+    val context = LocalContext.current
+    var showAccessibilityDialog by remember { mutableStateOf(false) }
+
+    // Helpers
+    val haptics = LocalHapticFeedback.current
+    val colors = MaterialTheme.colorScheme
+    val multiplier = settings.fontSize.multiplier
+
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(MaterialTheme.colorScheme.background)
+            .background(colors.background)
     ) {
+        // --- Contenido principal (debajo) ---
         Column(
             modifier = Modifier
                 .fillMaxSize()
                 .verticalScroll(rememberScrollState())
-                .padding(24.dp),
+                .padding(24.dp)
+                .semantics {
+                    contentDescription = "Pantalla de inicio de sesión. Ingrese su email y contraseña para acceder a la aplicación."
+                },
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center
         ) {
+            // Logo
             Icon(
                 Icons.Default.Person,
-                contentDescription = "Logo",
+                contentDescription = "Logo de la aplicación",
                 modifier = Modifier
-                    .size(100.dp)
+                    .size((100 * multiplier).dp)
                     .padding(bottom = 16.dp),
-                tint = MaterialTheme.colorScheme.primary
+                tint = colors.primary
             )
 
             Text(
                 text = "Bienvenido",
-                fontSize = 32.sp,
+                fontSize = (32 * multiplier).sp,
                 fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.primary,
+                color = colors.primary,
                 modifier = Modifier.padding(bottom = 8.dp)
             )
 
             Text(
                 text = "Inicia sesión para continuar",
-                fontSize = 16.sp,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                fontSize = (18 * multiplier).sp,
+                color = colors.onSurface,
                 modifier = Modifier.padding(bottom = 32.dp)
             )
 
+            // Campo Email
             OutlinedTextField(
                 value = email,
                 onValueChange = {
                     email = it
-                    showError = false
+                    if (showError) showError = false
                 },
-                label = { Text("Email") },
+                label = { Text("Email", fontSize = (16 * multiplier).sp) },
+                placeholder = { Text("ejemplo@correo.com", fontSize = (14 * multiplier).sp) },
                 leadingIcon = {
-                    Icon(Icons.Default.Email, contentDescription = "Email")
+                    Icon(
+                        Icons.Default.Email,
+                        contentDescription = "Ícono email",
+                        tint = colors.primary
+                    )
                 },
-                keyboardOptions = KeyboardOptions(
-                    keyboardType = KeyboardType.Email
-                ),
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
                 singleLine = true,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(bottom = 16.dp),
+                    .padding(bottom = 16.dp)
+                    .semantics { contentDescription = "Campo de email" },
                 shape = RoundedCornerShape(12.dp),
-                isError = showError
+                isError = showError && (email.isEmpty() || !email.contains("@")),
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedBorderColor = colors.primary,
+                    unfocusedBorderColor = colors.outline,
+                    errorBorderColor = colors.error,
+                    focusedLabelColor = colors.primary,
+                    unfocusedLabelColor = colors.onSurface,
+                    focusedTextColor = colors.onSurface,
+                    unfocusedTextColor = colors.onSurface
+                )
             )
 
+            // Campo Contraseña
             OutlinedTextField(
                 value = password,
                 onValueChange = {
                     password = it
-                    showError = false
+                    if (showError) showError = false
                 },
-                label = { Text("Contraseña") },
+                label = { Text("Contraseña", fontSize = (16 * multiplier).sp) },
+                placeholder = { Text("Mínimo 6 caracteres", fontSize = (14 * multiplier).sp) },
                 leadingIcon = {
-                    Icon(Icons.Default.Lock, contentDescription = "Password")
+                    Icon(
+                        Icons.Default.Lock,
+                        contentDescription = "Ícono contraseña",
+                        tint = colors.primary
+                    )
                 },
                 trailingIcon = {
-                    IconButton(onClick = { passwordVisible = !passwordVisible }) {
+                    IconButton(
+                        onClick = {
+                            passwordVisible = !passwordVisible
+                            haptics.performHapticFeedback(HapticFeedbackType.LongPress)
+                        }
+                    ) {
                         Icon(
-                            imageVector = if (passwordVisible)
-                                Icons.Default.Visibility
-                            else
-                                Icons.Default.VisibilityOff,
-                            contentDescription = if (passwordVisible)
-                                "Ocultar contraseña"
-                            else
-                                "Mostrar contraseña"
+                            imageVector = if (passwordVisible) Icons.Default.Visibility else Icons.Default.VisibilityOff,
+                            contentDescription = if (passwordVisible) "Ocultar contraseña" else "Mostrar contraseña",
+                            tint = colors.primary
                         )
                     }
                 },
-                visualTransformation = if (passwordVisible)
-                    VisualTransformation.None
-                else
-                    PasswordVisualTransformation(),
-                keyboardOptions = KeyboardOptions(
-                    keyboardType = KeyboardType.Password
-                ),
+                visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
                 singleLine = true,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(bottom = 8.dp),
+                    .padding(bottom = 8.dp)
+                    .semantics { contentDescription = "Campo de contraseña" },
                 shape = RoundedCornerShape(12.dp),
-                isError = showError
+                isError = showError && (password.isEmpty() || password.length < 6),
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedBorderColor = colors.primary,
+                    unfocusedBorderColor = colors.outline,
+                    errorBorderColor = colors.error,
+                    focusedLabelColor = colors.primary,
+                    unfocusedLabelColor = colors.onSurface,
+                    focusedTextColor = colors.onSurface,
+                    unfocusedTextColor = colors.onSurface
+                )
             )
 
+            // Error
             if (showError) {
-                Text(
-                    text = errorMessage,
-                    color = MaterialTheme.colorScheme.error,
-                    fontSize = 14.sp,
-                    modifier = Modifier.padding(bottom = 16.dp)
-                )
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = 8.dp, bottom = 16.dp),
+                    colors = CardDefaults.cardColors(containerColor = colors.surface),
+                    border = BorderStroke(2.dp, colors.error)
+                ) {
+                    Row(
+                        modifier = Modifier.padding(12.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(
+                            Icons.Default.Error,
+                            contentDescription = "Error",
+                            tint = colors.error,
+                            modifier = Modifier
+                                .size((20 * multiplier).dp)
+                                .padding(end = 8.dp)
+                        )
+                        Text(
+                            text = errorMessage,
+                            color = colors.error,
+                            fontSize = (16 * multiplier).sp,
+                            fontWeight = FontWeight.Medium
+                        )
+                    }
+                }
+            } else {
+                Spacer(Modifier.height(8.dp))
             }
 
+            // ¿Olvidaste tu contraseña?
             TextButton(
-                onClick = onNavigateToForgotPassword,
+                onClick = {
+                    haptics.performHapticFeedback(HapticFeedbackType.LongPress)
+                    onNavigateToForgotPassword()
+                },
                 modifier = Modifier
                     .align(Alignment.End)
                     .padding(bottom = 24.dp)
             ) {
-                Text("¿Olvidaste tu contraseña?")
+                Text(
+                    "¿Olvidaste tu contraseña?",
+                    fontSize = (16 * multiplier).sp,
+                    color = colors.primary
+                )
             }
 
+            // Iniciar Sesión
             Button(
                 onClick = {
+                    haptics.performHapticFeedback(HapticFeedbackType.LongPress)
                     when {
                         email.isEmpty() -> {
                             showError = true
                             errorMessage = "Por favor ingresa tu email"
                         }
-                        password.isEmpty() -> {
-                            showError = true
-                            errorMessage = "Por favor ingresa tu contraseña"
-                        }
                         !email.contains("@") -> {
                             showError = true
                             errorMessage = "Por favor ingresa un email válido"
+                        }
+                        password.isEmpty() -> {
+                            showError = true
+                            errorMessage = "Por favor ingresa tu contraseña"
                         }
                         password.length < 6 -> {
                             showError = true
@@ -174,46 +281,87 @@ fun LoginScreen(
                         }
                     }
                 },
+                enabled = email.isNotEmpty() && password.isNotEmpty(),
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(56.dp),
+                    .height((56 * multiplier).dp),
                 shape = RoundedCornerShape(12.dp),
-                enabled = email.isNotEmpty() && password.isNotEmpty()
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = colors.primary,
+                    contentColor = colors.onPrimary,
+                    disabledContainerColor = colors.onSurface.copy(alpha = 0.12f),
+                    disabledContentColor = colors.onSurface.copy(alpha = 0.38f)
+                )
             ) {
                 Text(
                     text = "Iniciar Sesión",
-                    fontSize = 18.sp,
+                    fontSize = (18 * multiplier).sp,
                     fontWeight = FontWeight.Medium
                 )
             }
 
             Spacer(modifier = Modifier.height(16.dp))
 
+            // Crear Cuenta
             OutlinedButton(
-                onClick = onNavigateToRegister,
+                onClick = {
+                    haptics.performHapticFeedback(HapticFeedbackType.LongPress)
+                    onNavigateToRegister()
+                },
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(56.dp),
-                shape = RoundedCornerShape(12.dp)
+                    .height((56 * multiplier).dp),
+                shape = RoundedCornerShape(12.dp),
+                colors = ButtonDefaults.outlinedButtonColors(
+                    containerColor = MaterialTheme.colorScheme.background,
+                    contentColor = colors.primary
+                ),
+                border = BorderStroke(2.dp, colors.primary)
             ) {
                 Text(
                     text = "Crear Cuenta",
-                    fontSize = 18.sp,
+                    fontSize = (18 * multiplier).sp,
                     fontWeight = FontWeight.Medium
                 )
             }
+
+            Spacer(modifier = Modifier.height(16.dp))
+        }
+
+        // --- Botón de Accesibilidad (encima) ---
+        manager.AccessibilityIconButton(
+            onAccessibilityClick = { showAccessibilityDialog = true },
+            modifier = Modifier
+                .align(Alignment.TopEnd)
+                .padding(16.dp)
+                .zIndex(1f) // asegura que reciba el click
+        )
+
+        // --- Diálogo de Accesibilidad ---
+        if (showAccessibilityDialog) {
+            manager.AccessibilityDialog(
+                currentSettings = settings,
+                onSettingsChanged = { new ->
+                    accessibilityViewModel.updateSettings(context, new)
+                },
+                onDismiss = { showAccessibilityDialog = false }
+            )
         }
     }
 }
 
+/* ---------- Preview opcional ---------- */
 @Preview(name = "Login", showBackground = true, widthDp = 360, heightDp = 720)
 @Composable
-fun LoginScreen_Preview() {
-    MaterialTheme {
+private fun LoginScreen_Preview() {
+    // Preview: VM fake
+    val fakeVm = AccessibilityViewModel()
+    Surface {
         LoginScreen(
             onNavigateToRegister = {},
             onNavigateToForgotPassword = {},
-            onLoginSuccess = {}
+            onLoginSuccess = {},
+            accessibilityViewModel = fakeVm
         )
     }
 }

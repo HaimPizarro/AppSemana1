@@ -24,7 +24,8 @@ import androidx.compose.ui.unit.sp
 @Composable
 fun RegisterScreen(
     onNavigateBack: () -> Unit,
-    onRegisterSuccess: () -> Unit
+    onRegisterSuccess: () -> Unit,
+    accessibilityViewModel: com.example.appsemana1.ui.theme.AccessibilityViewModel
 ) {
     var fullName by remember { mutableStateOf("") }
     var email by remember { mutableStateOf("") }

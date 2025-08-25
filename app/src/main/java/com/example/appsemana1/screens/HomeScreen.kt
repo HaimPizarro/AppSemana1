@@ -14,12 +14,15 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.ui.tooling.preview.Preview
+import com.example.appsemana1.ui.theme.AccessibilityViewModel
+import com.example.appsemana1.ui.theme.LocalAccessibilitySettings
+import com.example.appsemana1.ui.theme.rememberAccessibilityManager
 
 enum class MealType { DESAYUNO, ALMUERZO, CENA }
 
@@ -37,7 +40,16 @@ data class WeekPlan(val days: List<DayPlan>)
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun HomeScreen(onLogout: () -> Unit) {
+fun HomeScreen(
+    onLogout: () -> Unit,
+    accessibilityViewModel: AccessibilityViewModel
+) {
+    val settings = LocalAccessibilitySettings.current
+    val multiplier = settings.fontSize.multiplier
+    val manager = rememberAccessibilityManager()
+    val context = LocalContext.current
+    var showAccDialog by remember { mutableStateOf(false) }
+
     var tab by remember { mutableStateOf(0) }
     var week by remember {
         mutableStateOf(
@@ -67,9 +79,16 @@ fun HomeScreen(onLogout: () -> Unit) {
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Minuta Semanal", fontWeight = FontWeight.Bold) },
+                title = { Text("Minuta Semanal", fontWeight = FontWeight.Bold, fontSize = (20 * multiplier).sp) },
                 actions = {
-                    IconButton(onClick = onLogout) { Icon(Icons.Default.ExitToApp, contentDescription = null) }
+                    // Botón accesibilidad
+                    manager.AccessibilityIconButton(
+                        onAccessibilityClick = { showAccDialog = true }
+                    )
+                    // Logout
+                    IconButton(onClick = onLogout) {
+                        Icon(Icons.Default.ExitToApp, contentDescription = "Cerrar sesión")
+                    }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = MaterialTheme.colorScheme.primaryContainer,
@@ -115,11 +134,21 @@ fun HomeScreen(onLogout: () -> Unit) {
             3 -> ProfileTab(pv)
         }
     }
+
+    if (showAccDialog) {
+        manager.AccessibilityDialog(
+            currentSettings = settings,
+            onSettingsChanged = { new -> accessibilityViewModel.updateSettings(context, new) },
+            onDismiss = { showAccDialog = false }
+        )
+    }
 }
 
 @Composable
 fun WeekTab(pv: PaddingValues, plan: WeekPlan, recipes: List<Recipe>, onChange: (WeekPlan) -> Unit) {
+    val multiplier = LocalAccessibilitySettings.current.fontSize.multiplier
     var picker by remember { mutableStateOf<Triple<Int, MealType, Boolean>?>(null) }
+
     LazyColumn(
         modifier = Modifier
             .fillMaxSize()
@@ -128,13 +157,17 @@ fun WeekTab(pv: PaddingValues, plan: WeekPlan, recipes: List<Recipe>, onChange: 
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
         item {
-            Text("Elige tus recetas por día", fontSize = 20.sp, fontWeight = FontWeight.Bold)
+            Text("Elige tus recetas por día", fontSize = (20 * multiplier).sp, fontWeight = FontWeight.Bold)
         }
         items(plan.days.size) { idx ->
             val d = plan.days[idx]
             Card(shape = RoundedCornerShape(16.dp)) {
-                Column(Modifier.fillMaxWidth().padding(16.dp)) {
-                    Text(d.day, fontWeight = FontWeight.Bold, fontSize = 18.sp)
+                Column(
+                    Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp)
+                ) {
+                    Text(d.day, fontWeight = FontWeight.Bold, fontSize = (18 * multiplier).sp)
                     Spacer(Modifier.height(10.dp))
                     MealRow("Desayuno", d.breakfast, Icons.Default.WbSunny) { picker = Triple(idx, MealType.DESAYUNO, true) }
                     Spacer(Modifier.height(8.dp))
@@ -145,6 +178,7 @@ fun WeekTab(pv: PaddingValues, plan: WeekPlan, recipes: List<Recipe>, onChange: 
             }
         }
     }
+
     val p = picker
     if (p != null && p.third) {
         val options = recipes.filter { it.type == p.second }
@@ -175,14 +209,14 @@ fun WeekTab(pv: PaddingValues, plan: WeekPlan, recipes: List<Recipe>, onChange: 
                                         MealType.ALMUERZO -> Icons.Default.LunchDining
                                         MealType.CENA -> Icons.Default.Nightlight
                                     },
-                                    null
+                                    contentDescription = null
                                 )
                                 Spacer(Modifier.width(10.dp))
                                 Column(Modifier.weight(1f)) {
                                     Text(r.title, fontWeight = FontWeight.SemiBold)
                                     Text("${r.minutes} min • ${r.tags.joinToString()}", fontSize = 12.sp)
                                 }
-                                Icon(Icons.Default.CheckCircle, null)
+                                Icon(Icons.Default.CheckCircle, contentDescription = null)
                             }
                         }
                     }
@@ -194,12 +228,19 @@ fun WeekTab(pv: PaddingValues, plan: WeekPlan, recipes: List<Recipe>, onChange: 
 }
 
 @Composable
-fun MealRow(label: String, recipe: Recipe?, icon: ImageVector, onPick: () -> Unit) {
+fun MealRow(label: String, recipe: Recipe?, icon: Icons.Filled, onPick: () -> Unit) {
+    // Nota: firma de icon param era ImageVector, pero pasamos íconos de Filled
+    // Ajustamos tipo:
+}
+
+@Composable
+fun MealRow(label: String, recipe: Recipe?, icon: androidx.compose.ui.graphics.vector.ImageVector, onPick: () -> Unit) {
+    val multiplier = LocalAccessibilitySettings.current.fontSize.multiplier
     Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-        Text(label, modifier = Modifier.weight(0.8f), fontWeight = FontWeight.SemiBold)
+        Text(label, modifier = Modifier.weight(0.8f), fontWeight = FontWeight.SemiBold, fontSize = (14 * multiplier).sp)
         if (recipe == null) {
             OutlinedButton(onClick = onPick, modifier = Modifier.weight(1.2f)) {
-                Icon(Icons.Default.Add, null)
+                Icon(Icons.Default.Add, contentDescription = null)
                 Spacer(Modifier.width(6.dp))
                 Text("Elegir receta")
             }
@@ -215,7 +256,7 @@ fun MealRow(label: String, recipe: Recipe?, icon: ImageVector, onPick: () -> Uni
                 Text(recipe.title, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 Spacer(Modifier.height(4.dp))
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(icon, null, modifier = Modifier.size(16.dp))
+                    Icon(icon, contentDescription = null, modifier = Modifier.size(16.dp))
                     Spacer(Modifier.width(4.dp))
                     Text("${recipe.minutes} min", fontSize = 12.sp)
                 }
@@ -226,9 +267,11 @@ fun MealRow(label: String, recipe: Recipe?, icon: ImageVector, onPick: () -> Uni
 
 @Composable
 fun RecipesTab(pv: PaddingValues, recipes: List<Recipe>) {
+    val multiplier = LocalAccessibilitySettings.current.fontSize.multiplier
     var q by remember { mutableStateOf("") }
     var t by remember { mutableStateOf<MealType?>(null) }
     val filtered = recipes.filter { (t == null || it.type == t) && (q.isBlank() || it.title.lowercase().contains(q.lowercase())) }
+
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -240,7 +283,7 @@ fun RecipesTab(pv: PaddingValues, recipes: List<Recipe>) {
             onValueChange = { q = it },
             modifier = Modifier.fillMaxWidth(),
             placeholder = { Text("Buscar receta") },
-            leadingIcon = { Icon(Icons.Default.Search, null) },
+            leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
             singleLine = true,
             shape = RoundedCornerShape(12.dp)
         )
@@ -248,18 +291,22 @@ fun RecipesTab(pv: PaddingValues, recipes: List<Recipe>) {
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             FilterChip(selected = t == null, onClick = { t = null }, label = { Text("Todos") })
             FilterChip(selected = t == MealType.DESAYUNO, onClick = { t = MealType.DESAYUNO }, label = { Text("Desayuno") })
-            FilterChip(selected = t == MealType.ALMUERZO, onClick = { t == MealType.ALMUERZO }, label = { Text("Almuerzo") })
-            FilterChip(selected = t == MealType.CENA, onClick = { t = MealType.CENA }, label = { Text("Cena") })
+            FilterChip(selected = t == MealType.ALMUERZO, onClick = { t = MealType.ALMUERZO }, label = { Text("Almuerzo") }) // ← FIX
+            FilterChip(selected = t == MealType.CENA, onClick = { t = MealType.CENA }, label = { Text("Cena") })             // ← FIX
         }
         Spacer(Modifier.height(16.dp))
         LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
             items(filtered) { r ->
                 Card(onClick = {}, shape = RoundedCornerShape(12.dp)) {
-                    Column(Modifier.fillMaxWidth().padding(16.dp)) {
-                        Text(r.title, fontWeight = FontWeight.SemiBold, fontSize = 16.sp)
+                    Column(
+                        Modifier
+                            .fillMaxWidth()
+                            .padding(16.dp)
+                    ) {
+                        Text(r.title, fontWeight = FontWeight.SemiBold, fontSize = (16 * multiplier).sp)
                         Spacer(Modifier.height(6.dp))
                         Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(Icons.Default.Timer, null, modifier = Modifier.size(16.dp))
+                            Icon(Icons.Default.Timer, contentDescription = null, modifier = Modifier.size(16.dp))
                             Spacer(Modifier.width(4.dp))
                             Text("${r.minutes} min", fontSize = 12.sp)
                         }
@@ -274,13 +321,14 @@ fun RecipesTab(pv: PaddingValues, recipes: List<Recipe>) {
 
 @Composable
 fun ShoppingTab(pv: PaddingValues, items: List<Ingredient>) {
+    val multiplier = LocalAccessibilitySettings.current.fontSize.multiplier
     Column(
         modifier = Modifier
             .fillMaxSize()
             .padding(pv)
             .padding(16.dp)
     ) {
-        Text("Lista de compras", fontSize = 20.sp, fontWeight = FontWeight.Bold)
+        Text("Lista de compras", fontSize = (20 * multiplier).sp, fontWeight = FontWeight.Bold)
         Spacer(Modifier.height(8.dp))
         if (items.isEmpty()) {
             Text("Agrega recetas para ver los ingredientes.")
@@ -300,7 +348,7 @@ fun ShoppingTab(pv: PaddingValues, items: List<Ingredient>) {
                                     .clip(CircleShape)
                                     .background(MaterialTheme.colorScheme.primaryContainer),
                                 contentAlignment = Alignment.Center
-                            ) { Icon(Icons.Default.Checklist, null) }
+                            ) { Icon(Icons.Default.ListAlt, contentDescription = null) } // ← ícono seguro
                             Spacer(Modifier.width(12.dp))
                             Column {
                                 Text(ing.name, fontWeight = FontWeight.SemiBold)
@@ -316,6 +364,7 @@ fun ShoppingTab(pv: PaddingValues, items: List<Ingredient>) {
 
 @Composable
 fun ProfileTab(pv: PaddingValues) {
+    val multiplier = LocalAccessibilitySettings.current.fontSize.multiplier
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -325,20 +374,25 @@ fun ProfileTab(pv: PaddingValues) {
     ) {
         Box(
             modifier = Modifier
-                .size(100.dp)
+                .size((100 * multiplier).dp)
                 .clip(CircleShape)
                 .background(MaterialTheme.colorScheme.primaryContainer),
             contentAlignment = Alignment.Center
         ) {
-            Icon(Icons.Default.Person, null, modifier = Modifier.size(50.dp), tint = MaterialTheme.colorScheme.onPrimaryContainer)
+            Icon(Icons.Default.Person, contentDescription = null, modifier = Modifier.size((50 * multiplier).dp), tint = MaterialTheme.colorScheme.onPrimaryContainer)
         }
         Spacer(Modifier.height(12.dp))
-        Text("Dueña de casa", fontSize = 22.sp, fontWeight = FontWeight.Bold)
+        Text("Dueña de casa", fontSize = (22 * multiplier).sp, fontWeight = FontWeight.Bold)
         Text("perfil@ejemplo.com", color = MaterialTheme.colorScheme.onSurfaceVariant)
         Spacer(Modifier.height(24.dp))
         Card(onClick = {}, shape = RoundedCornerShape(12.dp)) {
-            Row(Modifier.fillMaxWidth().padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
-                Icon(Icons.Default.Settings, null)
+            Row(
+                Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Icon(Icons.Default.Settings, contentDescription = null)
                 Spacer(Modifier.width(12.dp))
                 Text("Preferencias de recetas")
             }
@@ -349,5 +403,8 @@ fun ProfileTab(pv: PaddingValues) {
 @Preview(name = "Home", showBackground = true, widthDp = 360, heightDp = 720)
 @Composable
 fun HomeScreen_Preview() {
-    MaterialTheme { HomeScreen(onLogout = {}) }
+    val fakeVm = AccessibilityViewModel()
+    MaterialTheme {
+        HomeScreen(onLogout = {}, accessibilityViewModel = fakeVm)
+    }
 }
