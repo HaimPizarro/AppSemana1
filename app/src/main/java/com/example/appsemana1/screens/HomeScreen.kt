@@ -1,9 +1,9 @@
 package com.example.appsemana1.screens
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -14,29 +14,60 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextDecoration
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.example.appsemana1.ui.theme.AccessibilityViewModel
-import com.example.appsemana1.ui.theme.LocalAccessibilitySettings
-import com.example.appsemana1.ui.theme.rememberAccessibilityManager
+import com.example.appsemana1.ui.theme.*
+import java.time.LocalDate
+import java.time.LocalTime
+import java.time.format.DateTimeFormatter
+import java.util.Locale
 
-enum class MealType { DESAYUNO, ALMUERZO, CENA }
+/* ======================= MODELOS ======================= */
 
-data class Ingredient(val name: String, val qty: String)
-data class Recipe(
+enum class UserRole { ADMIN, GUEST }
+
+data class Service(
     val id: String,
-    val title: String,
-    val minutes: Int,
-    val type: MealType,
-    val tags: List<String> = emptyList(),
-    val ingredients: List<Ingredient> = emptyList()
+    val name: String,
+    val duration: Int, // minutos
+    val price: Int,
+    val isActive: Boolean = true,
+    val promotion: Promotion? = null
 )
-data class DayPlan(val day: String, val breakfast: Recipe? = null, val lunch: Recipe? = null, val dinner: Recipe? = null)
-data class WeekPlan(val days: List<DayPlan>)
+
+data class Promotion(
+    val id: String,
+    val discount: Int,             // porcentaje
+    val description: String,
+    val validUntil: LocalDate
+)
+
+data class Appointment(
+    val id: String,
+    val serviceId: String,
+    val date: LocalDate,
+    val time: LocalTime,
+    val clientName: String = "",
+    val status: AppointmentStatus = AppointmentStatus.AVAILABLE
+)
+
+enum class AppointmentStatus { AVAILABLE, RESERVED, CONFIRMED, COMPLETED }
+
+data class DailyStats(
+    val date: LocalDate,
+    val totalAppointments: Int,
+    val completedAppointments: Int,
+    val revenue: Int
+)
+
+/* ======================= HOME ======================= */
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -44,47 +75,96 @@ fun HomeScreen(
     onLogout: () -> Unit,
     accessibilityViewModel: AccessibilityViewModel
 ) {
+    // Accesibilidad (tomamos el tamaño de fuente del Local que provee tu Theme)
     val settings = LocalAccessibilitySettings.current
     val multiplier = settings.fontSize.multiplier
-    val manager = rememberAccessibilityManager()
-    val context = LocalContext.current
+
+    // Manager y diálogo de accesibilidad
+    val accManager = rememberAccessibilityManager()
     var showAccDialog by remember { mutableStateOf(false) }
 
-    var tab by remember { mutableStateOf(0) }
-    var week by remember {
+    // ✅ Capturamos el contexto AQUÍ (composable) y lo usamos dentro del callback normal
+    val context = LocalContext.current
+
+    // Estado de la app
+    var currentUserRole by remember { mutableStateOf(UserRole.ADMIN) } // cámbialo tras login real
+    var selectedTab by remember { mutableStateOf(0) } // 0-Home, 1-Agenda, 2-Servicios, 3-Panel/Perfil
+
+    // Mock de datos (reemplaza por tu repositorio / backend)
+    val services by remember {
         mutableStateOf(
-            WeekPlan(listOf("Lunes","Martes","Miércoles","Jueves","Viernes","Sábado","Domingo").map { DayPlan(it) })
+            listOf(
+                Service("s1", "Corte de Cabello", 30, 15000,
+                    promotion = Promotion("p1", 20, "20% OFF este mes", LocalDate.now().plusDays(15))
+                ),
+                Service("s2", "Manicure", 45, 8000),
+                Service("s3", "Pedicure", 60, 12000),
+                Service("s4", "Masaje Relajante", 90, 25000,
+                    promotion = Promotion("p2", 15, "15% OFF nuevos clientes", LocalDate.now().plusDays(30))
+                ),
+                Service("s5", "Tratamiento Facial", 75, 20000)
+            )
         )
     }
-    val recipes = remember {
-        listOf(
-            Recipe("r1","Avena con fruta",10,MealType.DESAYUNO, listOf("Rápido"), listOf(Ingredient("Avena","1/2 tz"), Ingredient("Leche","1 tz"))),
-            Recipe("r2","Panqueques de avena",15,MealType.DESAYUNO, listOf("Económico"), listOf(Ingredient("Avena","1 tz"), Ingredient("Huevo","1 un"))),
-            Recipe("r3","Pollo con ensalada",25,MealType.ALMUERZO, listOf("Rápido"), listOf(Ingredient("Pollo","1 pechuga"), Ingredient("Lechuga","2 tz"))),
-            Recipe("r4","Porotos con rienda",45,MealType.ALMUERZO, listOf("Económico"), listOf(Ingredient("Porotos","1 tz"), Ingredient("Tallarin","1 tz"))),
-            Recipe("r5","Tortilla de verduras",20,MealType.CENA, listOf("Vegetariano"), listOf(Ingredient("Huevo","3 un"), Ingredient("Cebolla","1/2 un"))),
-            Recipe("r6","Sopa de verduras",30,MealType.CENA, listOf("Ligero"), listOf(Ingredient("Zanahoria","1 un"), Ingredient("Papa","1 un")))
+
+    val todayAppointments by remember {
+        mutableStateOf(
+            listOf(
+                Appointment("a1", "s1", LocalDate.now(), LocalTime.of(9, 0), "María García", AppointmentStatus.CONFIRMED),
+                Appointment("a2", "s2", LocalDate.now(), LocalTime.of(10, 30), "Ana López", AppointmentStatus.RESERVED),
+                Appointment("a3", "s1", LocalDate.now(), LocalTime.of(14, 0), status = AppointmentStatus.AVAILABLE),
+                Appointment("a4", "s3", LocalDate.now(), LocalTime.of(15, 30), status = AppointmentStatus.AVAILABLE),
+                Appointment("a5", "s4", LocalDate.now(), LocalTime.of(17, 0), "Carlos Ruiz", AppointmentStatus.COMPLETED)
+            )
         )
     }
-    val shopping by derivedStateOf {
-        val map = linkedMapOf<String, MutableList<String>>()
-        week.days.forEach { d ->
-            listOfNotNull(d.breakfast, d.lunch, d.dinner).forEach { r ->
-                r.ingredients.forEach { i -> map.getOrPut(i.name) { mutableListOf() }.add(i.qty) }
-            }
-        }
-        map.map { (k, v) -> Ingredient(k, v.joinToString(" + ")) }
+
+    val weekStats by remember {
+        mutableStateOf(
+            listOf(
+                DailyStats(LocalDate.now().minusDays(6), 8, 6, 120_000),
+                DailyStats(LocalDate.now().minusDays(5), 12, 10, 180_000),
+                DailyStats(LocalDate.now().minusDays(4), 6, 5, 95_000),
+                DailyStats(LocalDate.now().minusDays(3), 10, 8, 140_000),
+                DailyStats(LocalDate.now().minusDays(2), 14, 12, 220_000),
+                DailyStats(LocalDate.now().minusDays(1), 9, 8, 160_000),
+                DailyStats(LocalDate.now(), 6, 3, 85_000)
+            )
+        )
     }
 
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Minuta Semanal", fontWeight = FontWeight.Bold, fontSize = (20 * multiplier).sp) },
+                title = {
+                    Column {
+                        Text("AgendaPro", fontWeight = FontWeight.Bold, fontSize = (22 * multiplier).sp)
+                        Text(
+                            if (currentUserRole == UserRole.ADMIN) "Panel Administrador" else "Portal Cliente",
+                            fontSize = (12 * multiplier).sp,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                },
                 actions = {
-                    // Botón accesibilidad
-                    manager.AccessibilityIconButton(
-                        onAccessibilityClick = { showAccDialog = true }
+                    // Badge de rol (toggle para probar)
+                    AssistChip(
+                        onClick = {
+                            currentUserRole = if (currentUserRole == UserRole.ADMIN) UserRole.GUEST else UserRole.ADMIN
+                        },
+                        label = { Text(if (currentUserRole == UserRole.ADMIN) "ADMIN" else "INVITADO") },
+                        leadingIcon = {
+                            Icon(
+                                if (currentUserRole == UserRole.ADMIN) Icons.Default.ManageAccounts else Icons.Default.Person,
+                                contentDescription = null
+                            )
+                        }
                     )
+                    Spacer(Modifier.width(8.dp))
+
+                    // Botón de Accesibilidad (usa tu manager)
+                    accManager.AccessibilityIconButton(onAccessibilityClick = { showAccDialog = true })
+
                     // Logout
                     IconButton(onClick = onLogout) {
                         Icon(Icons.Default.ExitToApp, contentDescription = "Cerrar sesión")
@@ -98,45 +178,51 @@ fun HomeScreen(
         },
         bottomBar = {
             NavigationBar {
-                NavigationBarItem(selected = tab == 0, onClick = { tab = 0 }, icon = { Icon(Icons.Default.CalendarToday, null) }, label = { Text("Semana") })
-                NavigationBarItem(selected = tab == 1, onClick = { tab = 1 }, icon = { Icon(Icons.Default.Search, null) }, label = { Text("Recetas") })
-                NavigationBarItem(selected = tab == 2, onClick = { tab = 2 }, icon = { Icon(Icons.Default.ListAlt, null) }, label = { Text("Lista") })
-                NavigationBarItem(selected = tab == 3, onClick = { tab = 3 }, icon = { Icon(Icons.Default.Person, null) }, label = { Text("Perfil") })
+                NavigationBarItem(
+                    selected = selectedTab == 0, onClick = { selectedTab = 0 },
+                    icon = { Icon(Icons.Default.Dashboard, null) }, label = { Text("Inicio", fontSize = (12 * multiplier).sp) }
+                )
+                NavigationBarItem(
+                    selected = selectedTab == 1, onClick = { selectedTab = 1 },
+                    icon = { Icon(Icons.Default.CalendarToday, null) }, label = { Text("Agenda", fontSize = (12 * multiplier).sp) }
+                )
+                NavigationBarItem(
+                    selected = selectedTab == 2, onClick = { selectedTab = 2 },
+                    icon = { Icon(Icons.Default.MiscellaneousServices, null) }, label = { Text("Servicios", fontSize = (12 * multiplier).sp) }
+                )
+                NavigationBarItem(
+                    selected = selectedTab == 3, onClick = { selectedTab = 3 },
+                    icon = {
+                        Icon(if (currentUserRole == UserRole.ADMIN) Icons.Default.AdminPanelSettings else Icons.Default.Person, null)
+                    },
+                    label = { Text(if (currentUserRole == UserRole.ADMIN) "Panel" else "Perfil", fontSize = (12 * multiplier).sp) }
+                )
             }
         },
         floatingActionButton = {
-            if (tab == 0) {
+            if (currentUserRole == UserRole.ADMIN && selectedTab == 1) {
                 ExtendedFloatingActionButton(
-                    onClick = {
-                        val b = recipes.filter { it.type == MealType.DESAYUNO }
-                        val l = recipes.filter { it.type == MealType.ALMUERZO }
-                        val c = recipes.filter { it.type == MealType.CENA }
-                        week = week.copy(
-                            days = week.days.mapIndexed { i, d ->
-                                d.copy(
-                                    breakfast = b.getOrNull(i % maxOf(1, b.size)),
-                                    lunch = l.getOrNull(i % maxOf(1, l.size)),
-                                    dinner = c.getOrNull(i % maxOf(1, c.size))
-                                )
-                            }
-                        )
-                    },
-                    icon = { Icon(Icons.Default.AutoAwesome, null) },
-                    text = { Text("Generar semana") }
+                    onClick = { /* TODO: abrir diálogo crear cita */ },
+                    icon = { Icon(Icons.Default.Add, null) },
+                    text = { Text("Nueva Cita", fontSize = (14 * multiplier).sp) }
                 )
             }
         }
     ) { pv ->
-        when (tab) {
-            0 -> WeekTab(pv, week, recipes) { week = it }
-            1 -> RecipesTab(pv, recipes)
-            2 -> ShoppingTab(pv, shopping)
-            3 -> ProfileTab(pv)
+        when (selectedTab) {
+            0 -> DashboardTab(pv, currentUserRole, todayAppointments, services, weekStats, multiplier)
+            1 -> AgendaTab(pv, currentUserRole, todayAppointments, services, multiplier)
+            2 -> ServicesTab(pv, currentUserRole, services, multiplier)
+            3 -> if (currentUserRole == UserRole.ADMIN)
+                AdminPanelTab(pv, services, todayAppointments, multiplier)
+            else
+                ProfileTab(pv, multiplier)
         }
     }
 
+    // ✅ Aquí usamos el 'context' capturado (no llamamos LocalContext dentro del callback)
     if (showAccDialog) {
-        manager.AccessibilityDialog(
+        accManager.AccessibilityDialog(
             currentSettings = settings,
             onSettingsChanged = { new -> accessibilityViewModel.updateSettings(context, new) },
             onDismiss = { showAccDialog = false }
@@ -144,231 +230,186 @@ fun HomeScreen(
     }
 }
 
-@Composable
-fun WeekTab(pv: PaddingValues, plan: WeekPlan, recipes: List<Recipe>, onChange: (WeekPlan) -> Unit) {
-    val multiplier = LocalAccessibilitySettings.current.fontSize.multiplier
-    var picker by remember { mutableStateOf<Triple<Int, MealType, Boolean>?>(null) }
+/* ======================= TABS ======================= */
 
+@Composable
+private fun DashboardTab(
+    paddingValues: PaddingValues,
+    userRole: UserRole,
+    appointments: List<Appointment>,
+    services: List<Service>,
+    stats: List<DailyStats>,
+    multiplier: Float
+) {
+    val today = stats.lastOrNull()
     LazyColumn(
         modifier = Modifier
             .fillMaxSize()
-            .padding(pv),
-        contentPadding = PaddingValues(16.dp),
+            .padding(paddingValues)
+            .padding(16.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp)
+    ) {
+        item {
+            Text("Resumen del día", fontSize = (24 * multiplier).sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+        }
+
+        if (today != null) {
+            item {
+                LazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    items(
+                        listOf(
+                            Triple("Citas Hoy", "${today.totalAppointments}", Icons.Default.Today),
+                            Triple("Completadas", "${today.completedAppointments}", Icons.Default.CheckCircle),
+                            Triple("Ingresos", formatCLP(today.revenue), Icons.Default.AttachMoney),
+                            Triple("Servicios", "${services.count { it.isActive }}", Icons.Default.MiscellaneousServices)
+                        )
+                    ) { (title, value, icon) ->
+                        StatsCard(title, value, icon, multiplier)
+                    }
+                }
+            }
+        }
+
+        item {
+            Text("Próximas citas", fontSize = (20 * multiplier).sp, fontWeight = FontWeight.SemiBold)
+        }
+
+        items(appointments.sortedBy { it.time }.take(5)) { appointment ->
+            AppointmentCard(appointment, services, userRole, multiplier)
+        }
+
+        val activePromos = services.filter { it.isActive && it.promotion != null }
+        if (activePromos.isNotEmpty()) {
+            item { Text("Promociones activas", fontSize = (20 * multiplier).sp, fontWeight = FontWeight.SemiBold) }
+            items(activePromos) { svc -> PromotionCard(svc, multiplier) }
+        }
+    }
+}
+
+@Composable
+private fun AgendaTab(
+    paddingValues: PaddingValues,
+    userRole: UserRole,
+    appointments: List<Appointment>,
+    services: List<Service>,
+    multiplier: Float
+) {
+    val df = remember { DateTimeFormatter.ofPattern("dd/MM/yyyy") }
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(paddingValues)
+            .padding(16.dp)
+    ) {
+        Text("Calendario de citas", fontSize = (24 * multiplier).sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+        Spacer(Modifier.height(16.dp))
+
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(16.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text("Hoy - ${LocalDate.now().format(df)}", fontSize = (16 * multiplier).sp, fontWeight = FontWeight.Medium)
+                Icon(Icons.Default.CalendarMonth, contentDescription = "Cambiar fecha")
+            }
+        }
+
+        Spacer(Modifier.height(16.dp))
+
+        LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            items(appointments.sortedBy { it.time }) { appt ->
+                AppointmentCard(appt, services, userRole, multiplier)
+            }
+        }
+    }
+}
+
+@Composable
+private fun ServicesTab(
+    paddingValues: PaddingValues,
+    userRole: UserRole,
+    services: List<Service>,
+    multiplier: Float
+) {
+    LazyColumn(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(paddingValues)
+            .padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
         item {
-            Text("Elige tus recetas por día", fontSize = (20 * multiplier).sp, fontWeight = FontWeight.Bold)
-        }
-        items(plan.days.size) { idx ->
-            val d = plan.days[idx]
-            Card(shape = RoundedCornerShape(16.dp)) {
-                Column(
-                    Modifier
-                        .fillMaxWidth()
-                        .padding(16.dp)
-                ) {
-                    Text(d.day, fontWeight = FontWeight.Bold, fontSize = (18 * multiplier).sp)
-                    Spacer(Modifier.height(10.dp))
-                    MealRow("Desayuno", d.breakfast, Icons.Default.WbSunny) { picker = Triple(idx, MealType.DESAYUNO, true) }
-                    Spacer(Modifier.height(8.dp))
-                    MealRow("Almuerzo", d.lunch, Icons.Default.LunchDining) { picker = Triple(idx, MealType.ALMUERZO, true) }
-                    Spacer(Modifier.height(8.dp))
-                    MealRow("Cena", d.dinner, Icons.Default.Nightlight) { picker = Triple(idx, MealType.CENA, true) }
-                }
-            }
-        }
-    }
-
-    val p = picker
-    if (p != null && p.third) {
-        val options = recipes.filter { it.type == p.second }
-        AlertDialog(
-            onDismissRequest = { picker = null },
-            title = { Text("Elegir receta") },
-            text = {
-                LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    items(options) { r ->
-                        ElevatedCard(
-                            onClick = {
-                                val days = plan.days.toMutableList()
-                                val d0 = days[p.first]
-                                days[p.first] = when (p.second) {
-                                    MealType.DESAYUNO -> d0.copy(breakfast = r)
-                                    MealType.ALMUERZO -> d0.copy(lunch = r)
-                                    MealType.CENA -> d0.copy(dinner = r)
-                                }
-                                onChange(plan.copy(days = days))
-                                picker = null
-                            },
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
-                            Row(Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
-                                Icon(
-                                    when (r.type) {
-                                        MealType.DESAYUNO -> Icons.Default.WbSunny
-                                        MealType.ALMUERZO -> Icons.Default.LunchDining
-                                        MealType.CENA -> Icons.Default.Nightlight
-                                    },
-                                    contentDescription = null
-                                )
-                                Spacer(Modifier.width(10.dp))
-                                Column(Modifier.weight(1f)) {
-                                    Text(r.title, fontWeight = FontWeight.SemiBold)
-                                    Text("${r.minutes} min • ${r.tags.joinToString()}", fontSize = 12.sp)
-                                }
-                                Icon(Icons.Default.CheckCircle, contentDescription = null)
-                            }
-                        }
-                    }
-                }
-            },
-            confirmButton = { TextButton(onClick = { picker = null }) { Text("Cerrar") } }
-        )
-    }
-}
-
-@Composable
-fun MealRow(label: String, recipe: Recipe?, icon: Icons.Filled, onPick: () -> Unit) {
-    // Nota: firma de icon param era ImageVector, pero pasamos íconos de Filled
-    // Ajustamos tipo:
-}
-
-@Composable
-fun MealRow(label: String, recipe: Recipe?, icon: androidx.compose.ui.graphics.vector.ImageVector, onPick: () -> Unit) {
-    val multiplier = LocalAccessibilitySettings.current.fontSize.multiplier
-    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-        Text(label, modifier = Modifier.weight(0.8f), fontWeight = FontWeight.SemiBold, fontSize = (14 * multiplier).sp)
-        if (recipe == null) {
-            OutlinedButton(onClick = onPick, modifier = Modifier.weight(1.2f)) {
-                Icon(Icons.Default.Add, contentDescription = null)
-                Spacer(Modifier.width(6.dp))
-                Text("Elegir receta")
-            }
-        } else {
-            Column(
-                modifier = Modifier
-                    .weight(1.2f)
-                    .clip(RoundedCornerShape(10.dp))
-                    .background(MaterialTheme.colorScheme.surfaceVariant)
-                    .clickable { onPick() }
-                    .padding(12.dp)
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                Text(recipe.title, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                Spacer(Modifier.height(4.dp))
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(icon, contentDescription = null, modifier = Modifier.size(16.dp))
-                    Spacer(Modifier.width(4.dp))
-                    Text("${recipe.minutes} min", fontSize = 12.sp)
+                Text("Nuestros servicios", fontSize = (24 * multiplier).sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+                if (userRole == UserRole.ADMIN) {
+                    IconButton(onClick = { /* TODO: agregar servicio */ }) { Icon(Icons.Default.Add, contentDescription = "Agregar servicio") }
                 }
             }
+        }
+
+        items(services.filter { it.isActive }) { svc ->
+            ServiceCard(svc, userRole, multiplier)
         }
     }
 }
 
 @Composable
-fun RecipesTab(pv: PaddingValues, recipes: List<Recipe>) {
-    val multiplier = LocalAccessibilitySettings.current.fontSize.multiplier
-    var q by remember { mutableStateOf("") }
-    var t by remember { mutableStateOf<MealType?>(null) }
-    val filtered = recipes.filter { (t == null || it.type == t) && (q.isBlank() || it.title.lowercase().contains(q.lowercase())) }
-
-    Column(
+private fun AdminPanelTab(
+    paddingValues: PaddingValues,
+    services: List<Service>,
+    appointments: List<Appointment>,
+    multiplier: Float
+) {
+    LazyColumn(
         modifier = Modifier
             .fillMaxSize()
-            .padding(pv)
-            .padding(16.dp)
+            .padding(paddingValues)
+            .padding(16.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        OutlinedTextField(
-            value = q,
-            onValueChange = { q = it },
-            modifier = Modifier.fillMaxWidth(),
-            placeholder = { Text("Buscar receta") },
-            leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
-            singleLine = true,
-            shape = RoundedCornerShape(12.dp)
-        )
-        Spacer(Modifier.height(12.dp))
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            FilterChip(selected = t == null, onClick = { t = null }, label = { Text("Todos") })
-            FilterChip(selected = t == MealType.DESAYUNO, onClick = { t = MealType.DESAYUNO }, label = { Text("Desayuno") })
-            FilterChip(selected = t == MealType.ALMUERZO, onClick = { t = MealType.ALMUERZO }, label = { Text("Almuerzo") }) // ← FIX
-            FilterChip(selected = t == MealType.CENA, onClick = { t = MealType.CENA }, label = { Text("Cena") })             // ← FIX
+        item {
+            Text("Panel de Administración", fontSize = (24 * multiplier).sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
         }
-        Spacer(Modifier.height(16.dp))
-        LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            items(filtered) { r ->
-                Card(onClick = {}, shape = RoundedCornerShape(12.dp)) {
-                    Column(
-                        Modifier
-                            .fillMaxWidth()
-                            .padding(16.dp)
-                    ) {
-                        Text(r.title, fontWeight = FontWeight.SemiBold, fontSize = (16 * multiplier).sp)
-                        Spacer(Modifier.height(6.dp))
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(Icons.Default.Timer, contentDescription = null, modifier = Modifier.size(16.dp))
-                            Spacer(Modifier.width(4.dp))
-                            Text("${r.minutes} min", fontSize = 12.sp)
-                        }
-                        Spacer(Modifier.height(6.dp))
-                        Text(r.tags.joinToString(" • "), color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 12.sp)
+
+        item {
+            LazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                items(
+                    listOf(
+                        Triple("Nuevo Servicio", "Crear servicio", Icons.Default.Add),
+                        Triple("Promociones", "Gestionar ofertas", Icons.Default.LocalOffer),
+                        Triple("Horarios", "Configurar agenda", Icons.Default.Schedule),
+                        Triple("Reportes", "Ver estadísticas", Icons.Default.Analytics)
+                    )
+                ) { (title, subtitle, icon) ->
+                    AdminActionCard(title, subtitle, icon, multiplier) {
+                        /* TODO: implementar acciones */
                     }
                 }
             }
         }
-    }
-}
 
-@Composable
-fun ShoppingTab(pv: PaddingValues, items: List<Ingredient>) {
-    val multiplier = LocalAccessibilitySettings.current.fontSize.multiplier
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(pv)
-            .padding(16.dp)
-    ) {
-        Text("Lista de compras", fontSize = (20 * multiplier).sp, fontWeight = FontWeight.Bold)
-        Spacer(Modifier.height(8.dp))
-        if (items.isEmpty()) {
-            Text("Agrega recetas para ver los ingredientes.")
-        } else {
-            LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                items(items) { ing ->
-                    Card(shape = RoundedCornerShape(12.dp)) {
-                        Row(
-                            Modifier
-                                .fillMaxWidth()
-                                .padding(14.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Box(
-                                Modifier
-                                    .size(32.dp)
-                                    .clip(CircleShape)
-                                    .background(MaterialTheme.colorScheme.primaryContainer),
-                                contentAlignment = Alignment.Center
-                            ) { Icon(Icons.Default.ListAlt, contentDescription = null) } // ← ícono seguro
-                            Spacer(Modifier.width(12.dp))
-                            Column {
-                                Text(ing.name, fontWeight = FontWeight.SemiBold)
-                                Text(ing.qty, fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                            }
-                        }
-                    }
-                }
-            }
+        item { Text("Gestión rápida", fontSize = (20 * multiplier).sp, fontWeight = FontWeight.SemiBold) }
+
+        items(services) { svc ->
+            AdminServiceCard(svc, multiplier)
         }
     }
 }
 
 @Composable
-fun ProfileTab(pv: PaddingValues) {
-    val multiplier = LocalAccessibilitySettings.current.fontSize.multiplier
+private fun ProfileTab(paddingValues: PaddingValues, multiplier: Float) {
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .padding(pv)
+            .padding(paddingValues)
             .padding(16.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
@@ -381,30 +422,254 @@ fun ProfileTab(pv: PaddingValues) {
         ) {
             Icon(Icons.Default.Person, contentDescription = null, modifier = Modifier.size((50 * multiplier).dp), tint = MaterialTheme.colorScheme.onPrimaryContainer)
         }
-        Spacer(Modifier.height(12.dp))
-        Text("Dueña de casa", fontSize = (22 * multiplier).sp, fontWeight = FontWeight.Bold)
-        Text("perfil@ejemplo.com", color = MaterialTheme.colorScheme.onSurfaceVariant)
+
+        Spacer(Modifier.height(16.dp))
+
+        Text("Cliente Invitado", fontSize = (22 * multiplier).sp, fontWeight = FontWeight.Bold)
+        Text("invitado@agendapro.com", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = (14 * multiplier).sp)
+
         Spacer(Modifier.height(24.dp))
-        Card(onClick = {}, shape = RoundedCornerShape(12.dp)) {
-            Row(
-                Modifier
-                    .fillMaxWidth()
-                    .padding(16.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Icon(Icons.Default.Settings, contentDescription = null)
-                Spacer(Modifier.width(12.dp))
-                Text("Preferencias de recetas")
+
+        listOf(
+            Triple("Mis Reservas", "Ver citas programadas", Icons.Default.BookOnline),
+            Triple("Preferencias", "Configurar notificaciones", Icons.Default.Settings),
+            Triple("Ayuda", "Soporte y FAQ", Icons.Default.Help)
+        ).forEach { (title, subtitle, icon) ->
+            Card(onClick = { /* TODO */ }, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(12.dp)) {
+                Row(
+                    modifier = Modifier.fillMaxWidth().padding(16.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(icon, contentDescription = null)
+                    Spacer(Modifier.width(12.dp))
+                    Column(Modifier.weight(1f)) {
+                        Text(title, fontWeight = FontWeight.Medium)
+                        Text(subtitle, fontSize = (12 * multiplier).sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                    Icon(Icons.Default.ChevronRight, contentDescription = null)
+                }
+            }
+            Spacer(Modifier.height(8.dp))
+        }
+    }
+}
+
+/* ======================= COMPONENTES ======================= */
+
+@Composable
+private fun StatsCard(title: String, value: String, icon: ImageVector, multiplier: Float) {
+    Card(
+        modifier = Modifier.width((140 * multiplier).dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer)
+    ) {
+        Column(Modifier.padding(16.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+            Icon(icon, contentDescription = null, modifier = Modifier.size((32 * multiplier).dp), tint = MaterialTheme.colorScheme.onSecondaryContainer)
+            Spacer(Modifier.height(8.dp))
+            Text(value, fontSize = (20 * multiplier).sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSecondaryContainer)
+            Text(title, fontSize = (12 * multiplier).sp, color = MaterialTheme.colorScheme.onSecondaryContainer, textAlign = TextAlign.Center)
+        }
+    }
+}
+
+@Composable
+private fun AppointmentCard(
+    appointment: Appointment,
+    services: List<Service>,
+    userRole: UserRole,
+    multiplier: Float
+) {
+    val service = services.firstOrNull { it.id == appointment.serviceId }
+    val timeFmt = remember { DateTimeFormatter.ofPattern("HH:mm") }
+
+    Card(modifier = Modifier.fillMaxWidth()) {
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            // Hora y duración
+            Column {
+                Text(appointment.time.format(timeFmt), fontSize = (18 * multiplier).sp, fontWeight = FontWeight.Bold)
+                Text("${service?.duration ?: 0} min", fontSize = (12 * multiplier).sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+
+            Spacer(Modifier.width(16.dp))
+
+            // Detalles
+            Column(Modifier.weight(1f)) {
+                Text(service?.name ?: "Servicio", fontSize = (16 * multiplier).sp, fontWeight = FontWeight.Medium)
+                if (appointment.clientName.isNotBlank()) {
+                    Text(appointment.clientName, fontSize = (14 * multiplier).sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+                val statusText = when (appointment.status) {
+                    AppointmentStatus.AVAILABLE -> "Disponible"
+                    AppointmentStatus.RESERVED -> "Reservado"
+                    AppointmentStatus.CONFIRMED -> "Confirmado"
+                    AppointmentStatus.COMPLETED -> "Completado"
+                }
+                Text(statusText, fontSize = (12 * multiplier).sp, color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Medium)
+            }
+
+            // Precio
+            if (service != null) {
+                Text(
+                    formatCLP(service.price),
+                    fontSize = (16 * multiplier).sp,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.primary
+                )
             }
         }
     }
 }
 
-@Preview(name = "Home", showBackground = true, widthDp = 360, heightDp = 720)
 @Composable
-fun HomeScreen_Preview() {
-    val fakeVm = AccessibilityViewModel()
-    MaterialTheme {
-        HomeScreen(onLogout = {}, accessibilityViewModel = fakeVm)
+private fun ServiceCard(service: Service, userRole: UserRole, multiplier: Float) {
+    Card(modifier = Modifier.fillMaxWidth(), onClick = { /* TODO: detalles */ }) {
+        Column(Modifier.fillMaxWidth().padding(16.dp)) {
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.Top) {
+                Column(Modifier.weight(1f)) {
+                    Text(service.name, fontSize = (18 * multiplier).sp, fontWeight = FontWeight.Bold)
+                    Text("${service.duration} minutos", fontSize = (14 * multiplier).sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+
+                Column(horizontalAlignment = Alignment.End) {
+                    if (service.promotion != null) {
+                        Text(
+                            formatCLP(service.price),
+                            fontSize = (14 * multiplier).sp,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            style = TextStyle(textDecoration = TextDecoration.LineThrough)
+                        )
+                        val discountPrice = (service.price * (100 - service.promotion.discount)) / 100
+                        Text(
+                            formatCLP(discountPrice),
+                            fontSize = (18 * multiplier).sp,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                    } else {
+                        Text(
+                            formatCLP(service.price),
+                            fontSize = (18 * multiplier).sp,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                    }
+                }
+            }
+
+            if (service.promotion != null) {
+                Spacer(Modifier.height(8.dp))
+                Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.errorContainer)) {
+                    Text(
+                        "${service.promotion.discount}% OFF - ${service.promotion.description}",
+                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                        fontSize = (12 * multiplier).sp,
+                        color = MaterialTheme.colorScheme.onErrorContainer,
+                        fontWeight = FontWeight.Medium
+                    )
+                }
+            }
+
+            if (userRole == UserRole.GUEST) {
+                Spacer(Modifier.height(12.dp))
+                Button(onClick = { /* TODO: reservar */ }, modifier = Modifier.fillMaxWidth()) {
+                    Text("Reservar Cita", fontSize = (14 * multiplier).sp)
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun PromotionCard(service: Service, multiplier: Float) {
+    val promotion = service.promotion ?: return
+    val df = remember { DateTimeFormatter.ofPattern("dd/MM/yyyy") }
+
+    Card(modifier = Modifier.fillMaxWidth(), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.errorContainer)) {
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Icon(Icons.Default.LocalOffer, contentDescription = null, modifier = Modifier.size((32 * multiplier).dp), tint = MaterialTheme.colorScheme.onErrorContainer)
+            Spacer(Modifier.width(12.dp))
+            Column(Modifier.weight(1f)) {
+                Text("${promotion.discount}% OFF en ${service.name}", fontSize = (16 * multiplier).sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onErrorContainer)
+                Text(promotion.description, fontSize = (14 * multiplier).sp, color = MaterialTheme.colorScheme.onErrorContainer)
+                Text("Válido hasta ${promotion.validUntil.format(df)}", fontSize = (12 * multiplier).sp, color = MaterialTheme.colorScheme.onErrorContainer)
+            }
+        }
+    }
+}
+
+@Composable
+private fun AdminActionCard(
+    title: String,
+    subtitle: String,
+    icon: ImageVector,
+    multiplier: Float,
+    onClick: () -> Unit
+) {
+    Card(onClick = onClick, modifier = Modifier.width((160 * multiplier).dp)) {
+        Column(Modifier.padding(16.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+            Icon(icon, contentDescription = null, modifier = Modifier.size((40 * multiplier).dp), tint = MaterialTheme.colorScheme.primary)
+            Spacer(Modifier.height(8.dp))
+            Text(title, fontSize = (14 * multiplier).sp, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center)
+            Text(subtitle, fontSize = (12 * multiplier).sp, color = MaterialTheme.colorScheme.onSurfaceVariant, textAlign = TextAlign.Center)
+        }
+    }
+}
+
+@Composable
+private fun AdminServiceCard(service: Service, multiplier: Float) {
+    Card(modifier = Modifier.fillMaxWidth()) {
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Column(Modifier.weight(1f)) {
+                Text(service.name, fontWeight = FontWeight.SemiBold)
+                Text("${service.duration} min • ${formatCLP(service.price)}", style = MaterialTheme.typography.bodySmall)
+                Text(if (service.isActive) "Activo" else "Inactivo", style = MaterialTheme.typography.bodySmall)
+            }
+            IconButton(onClick = { /* TODO editar */ }) { Icon(Icons.Default.Edit, null) }
+            IconButton(onClick = { /* TODO activar/desactivar */ }) {
+                Icon(if (service.isActive) Icons.Default.VisibilityOff else Icons.Default.Visibility, null)
+            }
+            IconButton(onClick = { /* TODO eliminar (validar reservas futuras) */ }) { Icon(Icons.Default.Delete, null) }
+        }
+    }
+}
+
+/* ======================= HELPERS ======================= */
+
+private fun formatCLP(value: Int): String {
+    val s = "%,d".format(Locale("es", "CL"), value).replace(',', '.')
+    return "$$s"
+}
+
+/* ======================= PREVIEWS ======================= */
+
+@Preview(name = "AgendaPro Home - Admin", showBackground = true, widthDp = 360, heightDp = 720)
+@Composable
+private fun HomeScreen_Admin_Preview() {
+    val fakeViewModel = AccessibilityViewModel()
+    AppSemana1Theme {
+        HomeScreen(onLogout = {}, accessibilityViewModel = fakeViewModel)
+    }
+}
+
+@Preview(name = "AgendaPro Home - Guest", showBackground = true, widthDp = 360, heightDp = 720)
+@Composable
+private fun HomeScreen_Guest_Preview() {
+    val fakeViewModel = AccessibilityViewModel()
+    AppSemana1Theme(
+        accessibilitySettings = AccessibilitySettings(
+            fontSize = FontSize.LARGE,
+            colorblindType = ColorblindType.PROTANOPIA,
+            isColorblindMode = true
+        )
+    ) {
+        HomeScreen(onLogout = {}, accessibilityViewModel = fakeViewModel)
     }
 }

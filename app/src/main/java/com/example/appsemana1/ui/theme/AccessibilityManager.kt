@@ -1,15 +1,31 @@
 package com.example.appsemana1.ui.theme
 
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.*
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Accessibility
+import androidx.compose.material.icons.filled.ColorLens
+import androidx.compose.material.icons.filled.Contrast
+import androidx.compose.material.icons.filled.DarkMode
+import androidx.compose.material.icons.filled.LightMode
+import androidx.compose.material.icons.filled.FormatSize
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.Checkbox
+import androidx.compose.material3.FilterChip
+import androidx.compose.material3.FloatingActionButton
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.RadioButton
+import androidx.compose.material3.Text
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.semantics.contentDescription
@@ -17,8 +33,7 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-
-// ========== MANAGER PRINCIPAL DE ACCESIBILIDAD ==========
+import androidx.compose.ui.graphics.vector.ImageVector
 
 @Composable
 fun rememberAccessibilityManager(): AccessibilityManager {
@@ -32,17 +47,18 @@ class AccessibilityManager {
         onAccessibilityClick: () -> Unit,
         modifier: Modifier = Modifier
     ) {
-        val hapticFeedback = LocalHapticFeedback.current
+        val haptic = LocalHapticFeedback.current
 
         FloatingActionButton(
             onClick = {
-                hapticFeedback.performHapticFeedback(HapticFeedbackType.LongPress)
+                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                 onAccessibilityClick()
             },
             modifier = modifier
                 .size(56.dp)
                 .semantics {
-                    contentDescription = "Botón de configuración de accesibilidad. Presiona para personalizar la aplicación según tus necesidades visuales"
+                    contentDescription =
+                        "Botón de configuración de accesibilidad. Presiona para personalizar la aplicación según tus necesidades visuales"
                 },
             containerColor = MaterialTheme.colorScheme.primaryContainer,
             contentColor = MaterialTheme.colorScheme.onPrimaryContainer
@@ -60,11 +76,11 @@ class AccessibilityManager {
         onAccessibilityClick: () -> Unit,
         modifier: Modifier = Modifier
     ) {
-        val hapticFeedback = LocalHapticFeedback.current
+        val haptic = LocalHapticFeedback.current
 
         IconButton(
             onClick = {
-                hapticFeedback.performHapticFeedback(HapticFeedbackType.LongPress)
+                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                 onAccessibilityClick()
             },
             modifier = modifier.semantics {
@@ -83,10 +99,10 @@ class AccessibilityManager {
     @Composable
     fun AccessibilityDialog(
         currentSettings: AccessibilitySettings,
-        onSettingsChanged: (AccessibilitySettings) -> Unit,
+        onSettingsChanged: (AccessibilitySettings) -> Unit, // <- función normal (no @Composable)
         onDismiss: () -> Unit
     ) {
-        val hapticFeedback = LocalHapticFeedback.current
+        val haptic = LocalHapticFeedback.current
 
         AlertDialog(
             onDismissRequest = onDismiss,
@@ -125,7 +141,6 @@ class AccessibilityManager {
                         modifier = Modifier.padding(bottom = 20.dp)
                     )
 
-                    // Sección de Daltonismo
                     AccessibilitySection(
                         title = "Visión de colores",
                         description = "¿Tienes dificultades para distinguir colores?",
@@ -139,7 +154,6 @@ class AccessibilityManager {
 
                     Spacer(modifier = Modifier.height(24.dp))
 
-                    // Sección de Tamaño de Texto
                     AccessibilitySection(
                         title = "Tamaño del texto",
                         description = "Ajusta el tamaño para mejor legibilidad",
@@ -153,7 +167,6 @@ class AccessibilityManager {
 
                     Spacer(modifier = Modifier.height(24.dp))
 
-                    // Sección de Contraste
                     AccessibilitySection(
                         title = "Contraste visual",
                         description = "Mejora la visibilidad con alto contraste",
@@ -167,7 +180,6 @@ class AccessibilityManager {
 
                     Spacer(modifier = Modifier.height(24.dp))
 
-                    // Sección adicional: Modo oscuro
                     AccessibilitySection(
                         title = "Tema visual",
                         description = "Modo claro u oscuro",
@@ -183,7 +195,7 @@ class AccessibilityManager {
             confirmButton = {
                 Button(
                     onClick = {
-                        hapticFeedback.performHapticFeedback(HapticFeedbackType.LongPress)
+                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                         onDismiss()
                     }
                 ) {
@@ -197,15 +209,12 @@ class AccessibilityManager {
             dismissButton = {
                 OutlinedButton(
                     onClick = {
-                        hapticFeedback.performHapticFeedback(HapticFeedbackType.LongPress)
+                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                         onSettingsChanged(AccessibilitySettings())
                         onDismiss()
                     }
                 ) {
-                    Text(
-                        "Restablecer",
-                        fontSize = 16.sp
-                    )
+                    Text("Restablecer", fontSize = 16.sp)
                 }
             },
             containerColor = MaterialTheme.colorScheme.surface,
@@ -214,7 +223,7 @@ class AccessibilityManager {
     }
 }
 
-// ========== COMPONENTES AUXILIARES ==========
+/* =================== AUXILIARES =================== */
 
 @Composable
 private fun AccessibilitySection(
@@ -260,7 +269,7 @@ private fun ColorblindOptions(
     currentSettings: AccessibilitySettings,
     onSettingsChanged: (AccessibilitySettings) -> Unit
 ) {
-    val hapticFeedback = LocalHapticFeedback.current
+    val haptic = LocalHapticFeedback.current
 
     val colorblindOptions = listOf(
         ColorblindType.NONE to "Sin dificultades",
@@ -280,7 +289,7 @@ private fun ColorblindOptions(
             RadioButton(
                 selected = currentSettings.colorblindType == type,
                 onClick = {
-                    hapticFeedback.performHapticFeedback(HapticFeedbackType.LongPress)
+                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                     onSettingsChanged(
                         currentSettings.copy(
                             colorblindType = type,
@@ -304,7 +313,7 @@ private fun FontSizeOptions(
     currentSettings: AccessibilitySettings,
     onSettingsChanged: (AccessibilitySettings) -> Unit
 ) {
-    val hapticFeedback = LocalHapticFeedback.current
+    val haptic = LocalHapticFeedback.current
 
     val fontSizeOptions = listOf(
         FontSize.SMALL to "Pequeño",
@@ -324,7 +333,7 @@ private fun FontSizeOptions(
             RadioButton(
                 selected = currentSettings.fontSize == size,
                 onClick = {
-                    hapticFeedback.performHapticFeedback(HapticFeedbackType.LongPress)
+                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                     onSettingsChanged(currentSettings.copy(fontSize = size))
                 }
             )
@@ -343,7 +352,7 @@ private fun ContrastOptions(
     currentSettings: AccessibilitySettings,
     onSettingsChanged: (AccessibilitySettings) -> Unit
 ) {
-    val hapticFeedback = LocalHapticFeedback.current
+    val haptic = LocalHapticFeedback.current
 
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -364,7 +373,7 @@ private fun ContrastOptions(
             Checkbox(
                 checked = currentSettings.highContrast,
                 onCheckedChange = {
-                    hapticFeedback.performHapticFeedback(HapticFeedbackType.LongPress)
+                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                     onSettingsChanged(currentSettings.copy(highContrast = it))
                 }
             )
@@ -392,36 +401,30 @@ private fun ThemeOptions(
     currentSettings: AccessibilitySettings,
     onSettingsChanged: (AccessibilitySettings) -> Unit
 ) {
-    val hapticFeedback = LocalHapticFeedback.current
+    val haptic = LocalHapticFeedback.current
 
     Row(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.SpaceEvenly
     ) {
-        // Modo claro
         FilterChip(
             onClick = {
-                hapticFeedback.performHapticFeedback(HapticFeedbackType.LongPress)
+                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                 onSettingsChanged(currentSettings.copy(darkMode = false))
             },
-            label = {
-                Text("Modo claro", fontSize = 14.sp)
-            },
+            label = { Text("Modo claro", fontSize = 14.sp) },
             selected = !currentSettings.darkMode,
             leadingIcon = if (!currentSettings.darkMode) {
                 { Icon(Icons.Default.LightMode, contentDescription = null, modifier = Modifier.size(16.dp)) }
             } else null
         )
 
-        // Modo oscuro
         FilterChip(
             onClick = {
-                hapticFeedback.performHapticFeedback(HapticFeedbackType.LongPress)
+                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                 onSettingsChanged(currentSettings.copy(darkMode = true))
             },
-            label = {
-                Text("Modo oscuro", fontSize = 14.sp)
-            },
+            label = { Text("Modo oscuro", fontSize = 14.sp) },
             selected = currentSettings.darkMode,
             leadingIcon = if (currentSettings.darkMode) {
                 { Icon(Icons.Default.DarkMode, contentDescription = null, modifier = Modifier.size(16.dp)) }
