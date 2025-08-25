@@ -7,20 +7,40 @@ import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
+import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
-import com.example.appsemana1.ui.theme.AppSemana1Theme
+import androidx.compose.ui.platform.LocalContext
+import androidx.lifecycle.viewmodel.compose.viewModel
+
+import com.example.appsemana1.ui.theme.*
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+
         setContent {
-            AppSemana1Theme {
+            val accessibilityViewModel: AccessibilityViewModel = viewModel()
+            val context = LocalContext.current
+
+            LaunchedEffect(Unit) {
+                accessibilityViewModel.initialize(context)
+            }
+
+            val accessibilitySettings by accessibilityViewModel
+                .settings
+                .collectAsState(initial = AccessibilitySettings())
+
+            AppSemana1Theme(
+                accessibilitySettings = accessibilitySettings
+            ) {
                 Surface(
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background
                 ) {
-                    AppNavigation()
+                    AppNavigation(
+                        accessibilityViewModel = accessibilityViewModel
+                    )
                 }
             }
         }

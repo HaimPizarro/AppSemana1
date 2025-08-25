@@ -8,6 +8,7 @@ import com.example.appsemana1.screens.ForgotPasswordScreen
 import com.example.appsemana1.screens.HomeScreen
 import com.example.appsemana1.screens.LoginScreen
 import com.example.appsemana1.screens.RegisterScreen
+import com.example.appsemana1.ui.theme.AccessibilityViewModel
 
 object Routes {
     const val LOGIN = "login"
@@ -17,62 +18,58 @@ object Routes {
 }
 
 @Composable
-fun AppNavigation() {
+fun AppNavigation(
+    accessibilityViewModel: AccessibilityViewModel
+) {
     val navController = rememberNavController()
 
-    NavHost(
-        navController = navController,
-        startDestination = Routes.LOGIN
-    ) {
+    NavHost(navController = navController, startDestination = Routes.LOGIN) {
+
         composable(Routes.LOGIN) {
             LoginScreen(
-                onNavigateToRegister = {
-                    navController.navigate(Routes.REGISTER)
-                },
-                onNavigateToForgotPassword = {
-                    navController.navigate(Routes.FORGOT_PASSWORD)
-                },
+                onNavigateToRegister = { navController.navigate(Routes.REGISTER) },
+                onNavigateToForgotPassword = { navController.navigate(Routes.FORGOT_PASSWORD) },
                 onLoginSuccess = {
-                    navController.navigate(Routes.HOME) {
-                        popUpTo(Routes.LOGIN) { inclusive = true }
-                    }
-                }
+                    // Limpiar LOGIN del back stack y avanzar a HOME
+                    navController.popBackStack(Routes.LOGIN, inclusive = true)
+                    navController.navigate(Routes.HOME)
+                },
+                accessibilityViewModel = accessibilityViewModel
             )
         }
 
         composable(Routes.REGISTER) {
             RegisterScreen(
-                onNavigateBack = {
-                    navController.navigateUp()
-                },
+                onNavigateBack = { navController.navigateUp() },
                 onRegisterSuccess = {
-                    navController.navigate(Routes.LOGIN) {
-                        popUpTo(Routes.REGISTER) { inclusive = true }
-                    }
-                }
+                    // Salir de REGISTER y volver a LOGIN limpio
+                    navController.popBackStack(Routes.REGISTER, inclusive = true)
+                    navController.navigate(Routes.LOGIN)
+                },
+                accessibilityViewModel = accessibilityViewModel
             )
         }
 
         composable(Routes.FORGOT_PASSWORD) {
             ForgotPasswordScreen(
-                onNavigateBack = {
-                    navController.navigateUp()
-                },
+                onNavigateBack = { navController.navigateUp() },
                 onNavigateToLogin = {
-                    navController.navigate(Routes.LOGIN) {
-                        popUpTo(Routes.FORGOT_PASSWORD) { inclusive = true }
-                    }
-                }
+                    // Salir de FORGOT y volver a LOGIN limpio
+                    navController.popBackStack(Routes.FORGOT_PASSWORD, inclusive = true)
+                    navController.navigate(Routes.LOGIN)
+                },
+                accessibilityViewModel = accessibilityViewModel
             )
         }
 
         composable(Routes.HOME) {
             HomeScreen(
                 onLogout = {
-                    navController.navigate(Routes.LOGIN) {
-                        popUpTo(Routes.HOME) { inclusive = true }
-                    }
-                }
+                    // Cerrar sesión: limpiar HOME y volver a LOGIN
+                    navController.popBackStack(Routes.HOME, inclusive = true)
+                    navController.navigate(Routes.LOGIN)
+                },
+                accessibilityViewModel = accessibilityViewModel
             )
         }
     }
