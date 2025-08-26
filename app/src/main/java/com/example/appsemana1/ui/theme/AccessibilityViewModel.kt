@@ -11,7 +11,7 @@ class AccessibilityViewModel : ViewModel() {
     private val _settings = MutableStateFlow(AccessibilitySettings())
     val settings: StateFlow<AccessibilitySettings> = _settings.asStateFlow()
 
-    /** Carga inicial (SharedPreferences simple para no agregar dependencias) */
+    /** Carga inicial */
     fun initialize(context: Context) {
         val sp = context.getSharedPreferences("accessibility_prefs", Context.MODE_PRIVATE)
         val typeOrdinal = sp.getInt("colorblindType", ColorblindType.NONE.ordinal)

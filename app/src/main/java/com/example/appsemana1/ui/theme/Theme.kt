@@ -10,7 +10,6 @@ import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 
-// ========== CONFIGURACIÓN DE ACCESIBILIDAD ==========
 
 // Estados de accesibilidad
 data class AccessibilitySettings(
@@ -30,13 +29,10 @@ enum class FontSize(val multiplier: Float) {
     NORMAL(1.0f),
     LARGE(1.15f),
     EXTRA_LARGE(1.3f),
-    ACCESSIBILITY(1.5f)  // Tamaño extra para accesibilidad extrema
+    ACCESSIBILITY(1.5f)
 }
 
-// CompositionLocal para acceder a configuraciones desde cualquier lugar
 val LocalAccessibilitySettings = compositionLocalOf { AccessibilitySettings() }
-
-// ========== ESQUEMAS DE COLOR ORIGINALES (MEJORADOS) ==========
 
 private val DarkColorScheme = darkColorScheme(
     primary = Purple80,
@@ -175,7 +171,6 @@ fun getAccessibilityColorScheme(
     dynamicColor: Boolean = true
 ): ColorScheme {
     return when {
-        // Prioridad al alto contraste
         settings.highContrast -> HighContrastLightScheme
 
         // Esquemas para daltonismo
@@ -184,7 +179,7 @@ fun getAccessibilityColorScheme(
         settings.colorblindType == ColorblindType.TRITANOPIA -> TritanopiaLightScheme
         settings.colorblindType == ColorblindType.MONOCHROMATIC -> MonochromaticLightScheme
 
-        // Esquemas dinámicos estándar (Android 12+)
+        // Esquemas dinámicos estándar
         dynamicColor && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> {
             val context = LocalContext.current
             if (darkTheme || settings.darkMode) {
@@ -200,7 +195,6 @@ fun getAccessibilityColorScheme(
     }
 }
 
-// ========== TIPOGRAFÍA ADAPTATIVA ==========
 
 @Composable
 fun getAccessibilityTypography(settings: AccessibilitySettings): Typography {

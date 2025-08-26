@@ -230,7 +230,7 @@ fun ForgotPasswordScreen(
                                 // Simular envío de email
                                 isLoading = true
                                 coroutineScope.launch {
-                                    delay(2000) // Simular delay de red
+                                    delay(2000)
                                     isLoading = false
                                     showError = false
                                     showSuccess = true

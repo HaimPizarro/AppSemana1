@@ -75,7 +75,7 @@ fun HomeScreen(
     onLogout: () -> Unit,
     accessibilityViewModel: AccessibilityViewModel
 ) {
-    // Accesibilidad (tomamos el tamaño de fuente del Local que provee tu Theme)
+    // Accesibilidad
     val settings = LocalAccessibilitySettings.current
     val multiplier = settings.fontSize.multiplier
 
@@ -83,14 +83,13 @@ fun HomeScreen(
     val accManager = rememberAccessibilityManager()
     var showAccDialog by remember { mutableStateOf(false) }
 
-    // ✅ Capturamos el contexto AQUÍ (composable) y lo usamos dentro del callback normal
     val context = LocalContext.current
 
     // Estado de la app
-    var currentUserRole by remember { mutableStateOf(UserRole.ADMIN) } // cámbialo tras login real
-    var selectedTab by remember { mutableStateOf(0) } // 0-Home, 1-Agenda, 2-Servicios, 3-Panel/Perfil
+    var currentUserRole by remember { mutableStateOf(UserRole.ADMIN) }
+    var selectedTab by remember { mutableStateOf(0) }
 
-    // Mock de datos (reemplaza por tu repositorio / backend)
+    // Mock de datos
     val services by remember {
         mutableStateOf(
             listOf(
@@ -162,7 +161,7 @@ fun HomeScreen(
                     )
                     Spacer(Modifier.width(8.dp))
 
-                    // Botón de Accesibilidad (usa tu manager)
+                    // Botón de Accesibilidad
                     accManager.AccessibilityIconButton(onAccessibilityClick = { showAccDialog = true })
 
                     // Logout
@@ -220,7 +219,7 @@ fun HomeScreen(
         }
     }
 
-    // ✅ Aquí usamos el 'context' capturado (no llamamos LocalContext dentro del callback)
+    //uso del 'context' capturado
     if (showAccDialog) {
         accManager.AccessibilityDialog(
             currentSettings = settings,

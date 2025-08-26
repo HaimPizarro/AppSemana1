@@ -99,7 +99,7 @@ class AccessibilityManager {
     @Composable
     fun AccessibilityDialog(
         currentSettings: AccessibilitySettings,
-        onSettingsChanged: (AccessibilitySettings) -> Unit, // <- función normal (no @Composable)
+        onSettingsChanged: (AccessibilitySettings) -> Unit,
         onDismiss: () -> Unit
     ) {
         val haptic = LocalHapticFeedback.current

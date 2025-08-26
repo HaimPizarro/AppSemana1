@@ -2,7 +2,7 @@ package com.example.appsemana1.ui.theme
 
 import androidx.compose.ui.graphics.Color
 
-// ========== COLORES ORIGINALES (MANTENER) ==========
+// ========== COLORES ORIGINALES ==========
 val Purple80 = Color(0xFFD0BCFF)
 val PurpleGrey80 = Color(0xFFCCC2DC)
 val Pink80 = Color(0xFFEFB8C8)
@@ -23,7 +23,7 @@ val AccessibleRedLight = Color(0xFFEF5350)
 
 // ========== PALETAS PARA DALTONISMO ==========
 
-// Paleta para Protanopia (dificultad con rojos) - Usa azules y amarillos
+// Paleta para Protanopia (dificultad con rojos)
 object ProtanopiaColors {
     val Primary = Color(0xFF1565C0)          // Azul fuerte
     val PrimaryVariant = Color(0xFF0D47A1)   // Azul más oscuro
@@ -31,10 +31,10 @@ object ProtanopiaColors {
     val SecondaryVariant = Color(0xFFFF8F00) // Naranja
     val Surface = Color(0xFFF5F5F5)
     val Background = Color(0xFFFFFFFF)
-    val Error = Color(0xFF1565C0)            // Usar azul en lugar de rojo
+    val Error = Color(0xFF1565C0)
 }
 
-// Paleta para Deuteranopia (dificultad con verdes) - Usa púrpuras y azules
+// Paleta para Deuteranopia (dificultad con verdes)
 object DeuteranopiaColors {
     val Primary = Color(0xFF7B1FA2)          // Púrpura
     val PrimaryVariant = Color(0xFF4A148C)   // Púrpura oscuro
@@ -45,7 +45,7 @@ object DeuteranopiaColors {
     val Error = Color(0xFF7B1FA2)            // Púrpura para errores
 }
 
-// Paleta para Tritanopia (dificultad con azules) - Usa rojos y verdes
+// Paleta para Tritanopia (dificultad con azules) -
 object TritanopiaColors {
     val Primary = Color(0xFFD84315)          // Naranja/rojo
     val PrimaryVariant = Color(0xFFBF360C)   // Rojo oscuro

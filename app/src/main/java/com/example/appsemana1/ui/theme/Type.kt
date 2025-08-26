@@ -7,13 +7,10 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.sp
 
-// ========== FUENTES PARA ACCESIBILIDAD ==========
 
-// Fuente predeterminada (mantener la original)
+// Fuente predeterminada
 val DefaultFontFamily = FontFamily.Default
 
-// Fuente recomendada para dislexia y problemas de lectura
-// Si tienes fuentes personalizadas, puedes agregarlas aquí
 /*
 val AccessibilityFontFamily = FontFamily(
     Font(R.font.open_sans_regular, FontWeight.Normal),
@@ -22,9 +19,7 @@ val AccessibilityFontFamily = FontFamily(
 )
 */
 
-// ========== TIPOGRAFÍA BASE MEJORADA ==========
 
-// Set of Material typography styles optimizado para accesibilidad
 val Typography = Typography(
 
     // Display styles - Títulos muy grandes
@@ -96,60 +91,59 @@ val Typography = Typography(
         letterSpacing = 0.1.sp
     ),
 
-    // Body styles - Texto principal (MEJORADO PARA ACCESIBILIDAD)
+    // Body styles - Texto principal
     bodyLarge = TextStyle(
         fontFamily = DefaultFontFamily,
         fontWeight = FontWeight.Normal,
-        fontSize = 18.sp,        // Aumentado de 16sp a 18sp para mejor legibilidad
-        lineHeight = 26.sp,      // Aumentado para mejor espaciado
+        fontSize = 18.sp,
+        lineHeight = 26.sp,
         letterSpacing = 0.5.sp
     ),
     bodyMedium = TextStyle(
         fontFamily = DefaultFontFamily,
         fontWeight = FontWeight.Normal,
-        fontSize = 16.sp,        // Aumentado de 14sp a 16sp
-        lineHeight = 22.sp,      // Mejor espaciado
+        fontSize = 16.sp,
+        lineHeight = 22.sp,
         letterSpacing = 0.25.sp
     ),
     bodySmall = TextStyle(
         fontFamily = DefaultFontFamily,
         fontWeight = FontWeight.Normal,
-        fontSize = 14.sp,        // Aumentado de 12sp a 14sp
-        lineHeight = 18.sp,      // Mejor espaciado
+        fontSize = 14.sp,
+        lineHeight = 18.sp,
         letterSpacing = 0.4.sp
     ),
 
-    // Label styles - Etiquetas y botones (MEJORADO)
+    // Label styles - Etiquetas y botones
     labelLarge = TextStyle(
         fontFamily = DefaultFontFamily,
         fontWeight = FontWeight.Medium,
-        fontSize = 16.sp,        // Aumentado de 14sp a 16sp
-        lineHeight = 22.sp,      // Mejor espaciado
+        fontSize = 16.sp,        //
+        lineHeight = 22.sp,
         letterSpacing = 0.1.sp
     ),
     labelMedium = TextStyle(
         fontFamily = DefaultFontFamily,
         fontWeight = FontWeight.Medium,
-        fontSize = 14.sp,        // Aumentado de 12sp a 14sp
-        lineHeight = 18.sp,      // Mejor espaciado
+        fontSize = 14.sp,
+        lineHeight = 18.sp,
         letterSpacing = 0.5.sp
     ),
     labelSmall = TextStyle(
         fontFamily = DefaultFontFamily,
         fontWeight = FontWeight.Medium,
-        fontSize = 12.sp,        // Aumentado de 11sp a 12sp
+        fontSize = 12.sp,
         lineHeight = 16.sp,
         letterSpacing = 0.5.sp
     )
 )
 
-// ========== TIPOGRAFÍAS ESPECIALIZADAS ==========
 
-// Tipografía para alto contraste (más gruesa)
+// Tipografía para alto contraste
 val HighContrastTypography = Typography.copy(
     bodyLarge = Typography.bodyLarge.copy(
-        fontWeight = FontWeight.Medium,  // Más grueso para mejor visibilidad
-        fontSize = 20.sp,                // Más grande
+        fontWeight = FontWeight.Medium,
+        fontSize = 20.sp,
         lineHeight = 28.sp
     ),
     bodyMedium = Typography.bodyMedium.copy(
@@ -163,7 +157,7 @@ val HighContrastTypography = Typography.copy(
         lineHeight = 20.sp
     ),
     labelLarge = Typography.labelLarge.copy(
-        fontWeight = FontWeight.Bold,    // Etiquetas más prominentes
+        fontWeight = FontWeight.Bold,
         fontSize = 18.sp,
         lineHeight = 24.sp
     ),
@@ -178,8 +172,8 @@ val HighContrastTypography = Typography.copy(
 val DyslexiaFriendlyTypography = Typography.copy(
     bodyLarge = Typography.bodyLarge.copy(
         fontSize = 20.sp,
-        lineHeight = 30.sp,              // Espaciado extra
-        letterSpacing = 1.sp             // Más espacio entre letras
+        lineHeight = 30.sp,
+        letterSpacing = 1.sp
     ),
     bodyMedium = Typography.bodyMedium.copy(
         fontSize = 18.sp,
@@ -193,7 +187,6 @@ val DyslexiaFriendlyTypography = Typography.copy(
     )
 )
 
-// ========== UTILIDADES PARA TEXTO ACCESIBLE ==========
 
 // Función para obtener el tamaño mínimo recomendado según WCAG
 object AccessibleTextSizes {

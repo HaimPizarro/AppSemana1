@@ -81,7 +81,7 @@ fun LoginScreen(
             .fillMaxSize()
             .background(colors.background)
     ) {
-        // --- Contenido principal (debajo) ---
+        // --- Contenido principal  ---
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -328,7 +328,7 @@ fun LoginScreen(
             Spacer(modifier = Modifier.height(16.dp))
         }
 
-        // --- Botón de Accesibilidad (encima) ---
+        // --- Botón de Accesibilidad  ---
         manager.AccessibilityIconButton(
             onAccessibilityClick = { showAccessibilityDialog = true },
             modifier = Modifier
