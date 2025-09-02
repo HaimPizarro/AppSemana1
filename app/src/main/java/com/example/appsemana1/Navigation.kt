@@ -8,6 +8,7 @@ import com.example.appsemana1.screens.ForgotPasswordScreen
 import com.example.appsemana1.screens.HomeScreen
 import com.example.appsemana1.screens.LoginScreen
 import com.example.appsemana1.screens.RegisterScreen
+import com.example.appsemana1.screens.SettingsScreen
 import com.example.appsemana1.ui.theme.AccessibilityViewModel
 
 object Routes {
@@ -15,6 +16,7 @@ object Routes {
     const val REGISTER = "register"
     const val FORGOT_PASSWORD = "forgot_password"
     const val HOME = "home"
+    const val SETTINGS = "settings"
 }
 
 @Composable
@@ -30,7 +32,6 @@ fun AppNavigation(
                 onNavigateToRegister = { navController.navigate(Routes.REGISTER) },
                 onNavigateToForgotPassword = { navController.navigate(Routes.FORGOT_PASSWORD) },
                 onLoginSuccess = {
-                    // Limpiar LOGIN del back stack y avanzar a HOME
                     navController.popBackStack(Routes.LOGIN, inclusive = true)
                     navController.navigate(Routes.HOME)
                 },
@@ -42,7 +43,6 @@ fun AppNavigation(
             RegisterScreen(
                 onNavigateBack = { navController.navigateUp() },
                 onRegisterSuccess = {
-                    // Salir de REGISTER y volver a LOGIN limpio
                     navController.popBackStack(Routes.REGISTER, inclusive = true)
                     navController.navigate(Routes.LOGIN)
                 },
@@ -54,7 +54,6 @@ fun AppNavigation(
             ForgotPasswordScreen(
                 onNavigateBack = { navController.navigateUp() },
                 onNavigateToLogin = {
-                    // Salir de FORGOT y volver a LOGIN limpio
                     navController.popBackStack(Routes.FORGOT_PASSWORD, inclusive = true)
                     navController.navigate(Routes.LOGIN)
                 },
@@ -65,11 +64,19 @@ fun AppNavigation(
         composable(Routes.HOME) {
             HomeScreen(
                 onLogout = {
-                    // Cerrar sesión: limpiar HOME y volver a LOGIN
                     navController.popBackStack(Routes.HOME, inclusive = true)
                     navController.navigate(Routes.LOGIN)
                 },
+                onOpenSettings = {
+                    navController.navigate(Routes.SETTINGS)
+                },
                 accessibilityViewModel = accessibilityViewModel
+            )
+        }
+
+        composable(Routes.SETTINGS) {
+            SettingsScreen(
+                onNavigateBack = { navController.navigateUp() }
             )
         }
     }

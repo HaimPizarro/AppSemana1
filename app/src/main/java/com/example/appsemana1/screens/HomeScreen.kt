@@ -16,10 +16,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextDecoration
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -73,6 +73,7 @@ data class DailyStats(
 @Composable
 fun HomeScreen(
     onLogout: () -> Unit,
+    onOpenSettings: () -> Unit,                 // ⬅️ callback para navegar a Settings
     accessibilityViewModel: AccessibilityViewModel
 ) {
     // Accesibilidad
@@ -82,7 +83,6 @@ fun HomeScreen(
     // Manager y diálogo de accesibilidad
     val accManager = rememberAccessibilityManager()
     var showAccDialog by remember { mutableStateOf(false) }
-
     val context = LocalContext.current
 
     // Estado de la app
@@ -215,11 +215,11 @@ fun HomeScreen(
             3 -> if (currentUserRole == UserRole.ADMIN)
                 AdminPanelTab(pv, services, todayAppointments, multiplier)
             else
-                ProfileTab(pv, multiplier)
+                ProfileTab(pv, multiplier, onOpenSettings) // ⬅️ se pasa el callback aquí
         }
     }
 
-    //uso del 'context' capturado
+    // Diálogo de accesibilidad
     if (showAccDialog) {
         accManager.AccessibilityDialog(
             currentSettings = settings,
@@ -308,7 +308,9 @@ private fun AgendaTab(
             colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
         ) {
             Row(
-                modifier = Modifier.fillMaxWidth().padding(16.dp),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
@@ -404,7 +406,11 @@ private fun AdminPanelTab(
 }
 
 @Composable
-private fun ProfileTab(paddingValues: PaddingValues, multiplier: Float) {
+private fun ProfileTab(
+    paddingValues: PaddingValues,
+    multiplier: Float,
+    onOpenSettings: () -> Unit          // ⬅️ callback recibido aquí
+) {
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -419,7 +425,12 @@ private fun ProfileTab(paddingValues: PaddingValues, multiplier: Float) {
                 .background(MaterialTheme.colorScheme.primaryContainer),
             contentAlignment = Alignment.Center
         ) {
-            Icon(Icons.Default.Person, contentDescription = null, modifier = Modifier.size((50 * multiplier).dp), tint = MaterialTheme.colorScheme.onPrimaryContainer)
+            Icon(
+                Icons.Default.Person,
+                contentDescription = null,
+                modifier = Modifier.size((50 * multiplier).dp),
+                tint = MaterialTheme.colorScheme.onPrimaryContainer
+            )
         }
 
         Spacer(Modifier.height(16.dp))
@@ -429,31 +440,69 @@ private fun ProfileTab(paddingValues: PaddingValues, multiplier: Float) {
 
         Spacer(Modifier.height(24.dp))
 
-        listOf(
-            Triple("Mis Reservas", "Ver citas programadas", Icons.Default.BookOnline),
-            Triple("Preferencias", "Configurar notificaciones", Icons.Default.Settings),
-            Triple("Ayuda", "Soporte y FAQ", Icons.Default.Help)
-        ).forEach { (title, subtitle, icon) ->
-            Card(onClick = { /* TODO */ }, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(12.dp)) {
-                Row(
-                    modifier = Modifier.fillMaxWidth().padding(16.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Icon(icon, contentDescription = null)
-                    Spacer(Modifier.width(12.dp))
-                    Column(Modifier.weight(1f)) {
-                        Text(title, fontWeight = FontWeight.Medium)
-                        Text(subtitle, fontSize = (12 * multiplier).sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    }
-                    Icon(Icons.Default.ChevronRight, contentDescription = null)
-                }
-            }
-            Spacer(Modifier.height(8.dp))
-        }
+        ProfileOptionItem(
+            icon = Icons.Default.BookOnline,
+            title = "Mis Reservas",
+            subtitle = "Ver citas programadas",
+            onClick = { /* TODO */ },
+            multiplier = multiplier
+        )
+
+        ProfileOptionItem(
+            icon = Icons.Default.Settings,
+            title = "Preferencias",
+            subtitle = "Configurar notificaciones",
+            onClick = { /* TODO */ },
+            multiplier = multiplier
+        )
+
+        ProfileOptionItem(
+            icon = Icons.Default.Help,
+            title = "Ayuda",
+            subtitle = "Soporte y FAQ",
+            onClick = { /* TODO */ },
+            multiplier = multiplier
+        )
+
+        // ⬇️ Acceso a SettingsScreen (demo de componentes UI)
+        ProfileOptionItem(
+            icon = Icons.Default.Code,
+            title = "Componentes UI Demo",
+            subtitle = "Inputs, botones, tablas, grillas, etc.",
+            onClick = onOpenSettings,                   // ⬅️ NAVEGA A SETTINGS
+            multiplier = multiplier
+        )
     }
 }
 
 /* ======================= COMPONENTES ======================= */
+
+@Composable
+private fun ProfileOptionItem(
+    icon: ImageVector,
+    title: String,
+    subtitle: String,
+    onClick: () -> Unit,
+    multiplier: Float
+) {
+    Card(onClick = onClick, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(12.dp)) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Icon(icon, contentDescription = null)
+            Spacer(Modifier.width(12.dp))
+            Column(Modifier.weight(1f)) {
+                Text(title, fontWeight = FontWeight.Medium)
+                Text(subtitle, fontSize = (12 * multiplier).sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+            Icon(Icons.Default.ChevronRight, contentDescription = null)
+        }
+    }
+    Spacer(Modifier.height(8.dp))
+}
 
 @Composable
 private fun StatsCard(title: String, value: String, icon: ImageVector, multiplier: Float) {
@@ -482,7 +531,9 @@ private fun AppointmentCard(
 
     Card(modifier = Modifier.fillMaxWidth()) {
         Row(
-            modifier = Modifier.fillMaxWidth().padding(16.dp),
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             // Hora y duración
@@ -587,7 +638,9 @@ private fun PromotionCard(service: Service, multiplier: Float) {
 
     Card(modifier = Modifier.fillMaxWidth(), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.errorContainer)) {
         Row(
-            modifier = Modifier.fillMaxWidth().padding(16.dp),
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             Icon(Icons.Default.LocalOffer, contentDescription = null, modifier = Modifier.size((32 * multiplier).dp), tint = MaterialTheme.colorScheme.onErrorContainer)
@@ -623,7 +676,9 @@ private fun AdminActionCard(
 private fun AdminServiceCard(service: Service, multiplier: Float) {
     Card(modifier = Modifier.fillMaxWidth()) {
         Row(
-            modifier = Modifier.fillMaxWidth().padding(16.dp),
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             Column(Modifier.weight(1f)) {
@@ -654,7 +709,11 @@ private fun formatCLP(value: Int): String {
 private fun HomeScreen_Admin_Preview() {
     val fakeViewModel = AccessibilityViewModel()
     AppSemana1Theme {
-        HomeScreen(onLogout = {}, accessibilityViewModel = fakeViewModel)
+        HomeScreen(
+            onLogout = {},
+            onOpenSettings = {},                  // ⬅️ preview
+            accessibilityViewModel = fakeViewModel
+        )
     }
 }
 
@@ -669,6 +728,10 @@ private fun HomeScreen_Guest_Preview() {
             isColorblindMode = true
         )
     ) {
-        HomeScreen(onLogout = {}, accessibilityViewModel = fakeViewModel)
+        HomeScreen(
+            onLogout = {},
+            onOpenSettings = {},                  // ⬅️ preview
+            accessibilityViewModel = fakeViewModel
+        )
     }
 }
