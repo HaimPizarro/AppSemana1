@@ -73,7 +73,7 @@ data class DailyStats(
 @Composable
 fun HomeScreen(
     onLogout: () -> Unit,
-    onOpenSettings: () -> Unit,                 // ⬅️ callback para navegar a Settings
+    onOpenSettings: () -> Unit,
     accessibilityViewModel: AccessibilityViewModel
 ) {
     // Accesibilidad
@@ -215,7 +215,7 @@ fun HomeScreen(
             3 -> if (currentUserRole == UserRole.ADMIN)
                 AdminPanelTab(pv, services, todayAppointments, multiplier)
             else
-                ProfileTab(pv, multiplier, onOpenSettings) // ⬅️ se pasa el callback aquí
+                ProfileTab(pv, multiplier, onOpenSettings)
         }
     }
 
@@ -409,7 +409,7 @@ private fun AdminPanelTab(
 private fun ProfileTab(
     paddingValues: PaddingValues,
     multiplier: Float,
-    onOpenSettings: () -> Unit          // ⬅️ callback recibido aquí
+    onOpenSettings: () -> Unit
 ) {
     Column(
         modifier = Modifier
@@ -711,7 +711,7 @@ private fun HomeScreen_Admin_Preview() {
     AppSemana1Theme {
         HomeScreen(
             onLogout = {},
-            onOpenSettings = {},                  // ⬅️ preview
+            onOpenSettings = {},
             accessibilityViewModel = fakeViewModel
         )
     }
@@ -730,7 +730,7 @@ private fun HomeScreen_Guest_Preview() {
     ) {
         HomeScreen(
             onLogout = {},
-            onOpenSettings = {},                  // ⬅️ preview
+            onOpenSettings = {},
             accessibilityViewModel = fakeViewModel
         )
     }
