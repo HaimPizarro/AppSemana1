@@ -4,7 +4,6 @@ import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -20,9 +19,13 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.appsemana1.auth.AuthResult
+import com.example.appsemana1.auth.AuthViewModel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
@@ -30,14 +33,16 @@ import kotlinx.coroutines.launch
 fun ForgotPasswordScreen(
     onNavigateBack: () -> Unit,
     onNavigateToLogin: () -> Unit,
-    accessibilityViewModel: com.example.appsemana1.ui.theme.AccessibilityViewModel
+    accessibilityViewModel: com.example.appsemana1.ui.theme.AccessibilityViewModel,
+    authViewModel: AuthViewModel
 ) {
     var email by remember { mutableStateOf("") }
+    var newPassword by remember { mutableStateOf("") }
+    var showPassword by remember { mutableStateOf(false) }
+    var message by remember { mutableStateOf("") }
     var showError by remember { mutableStateOf(false) }
     var showSuccess by remember { mutableStateOf(false) }
     var isLoading by remember { mutableStateOf(false) }
-    var message by remember { mutableStateOf("") }
-    var emailSent by remember { mutableStateOf(false) }
     val coroutineScope = rememberCoroutineScope()
 
     Box(
@@ -52,342 +57,138 @@ fun ForgotPasswordScreen(
                 .padding(24.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            // Botón de volver
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                IconButton(
-                    onClick = onNavigateBack
-                ) {
-                    Icon(
-                        Icons.Default.ArrowBack,
-                        contentDescription = "Volver",
-                        tint = MaterialTheme.colorScheme.primary
-                    )
-                }
-                Text(
-                    text = "Volver",
-                    color = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.clickable { onNavigateBack() }
-                )
+            IconButton(onClick = onNavigateBack, modifier = Modifier.align(Alignment.Start)) {
+                Icon(Icons.Default.ArrowBack, contentDescription = "Volver", tint = MaterialTheme.colorScheme.primary)
             }
 
-            Spacer(modifier = Modifier.height(48.dp))
+            Spacer(modifier = Modifier.height(32.dp))
 
-            // Icono animado
-            AnimatedVisibility(
-                visible = !emailSent,
-                enter = fadeIn(),
-                exit = fadeOut()
-            ) {
-                Icon(
-                    Icons.Default.Lock,
-                    contentDescription = "Recuperar Contraseña",
-                    modifier = Modifier
-                        .size(100.dp)
-                        .padding(bottom = 24.dp),
-                    tint = MaterialTheme.colorScheme.primary
-                )
-            }
+            Icon(
+                Icons.Default.LockReset,
+                contentDescription = null,
+                modifier = Modifier.size(100.dp),
+                tint = MaterialTheme.colorScheme.primary
+            )
 
-            AnimatedVisibility(
-                visible = emailSent,
-                enter = fadeIn(),
-                exit = fadeOut()
-            ) {
-                Icon(
-                    Icons.Default.MarkEmailRead,
-                    contentDescription = "Email Enviado",
-                    modifier = Modifier
-                        .size(100.dp)
-                        .padding(bottom = 24.dp),
-                    tint = MaterialTheme.colorScheme.primary
-                )
-            }
+            Spacer(modifier = Modifier.height(16.dp))
 
-            // Título
             Text(
-                text = if (emailSent) "¡Correo Enviado!" else "Recuperar Contraseña",
-                fontSize = 28.sp,
+                text = "Restablecer Contraseña",
+                fontSize = 26.sp,
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.primary,
-                modifier = Modifier.padding(bottom = 16.dp),
                 textAlign = TextAlign.Center
             )
 
-            // Descripción
-            Text(
-                text = if (emailSent) {
-                    "Hemos enviado las instrucciones para restablecer tu contraseña a:\n$email"
-                } else {
-                    "Ingresa tu email y te enviaremos instrucciones para restablecer tu contraseña"
-                },
-                fontSize = 14.sp,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                textAlign = TextAlign.Center,
-                modifier = Modifier.padding(bottom = 32.dp)
+            Spacer(modifier = Modifier.height(16.dp))
+
+            OutlinedTextField(
+                value = email,
+                onValueChange = { email = it; showError = false; showSuccess = false },
+                label = { Text("Email registrado") },
+                leadingIcon = { Icon(Icons.Default.Email, contentDescription = null) },
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
+                singleLine = true,
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(12.dp),
+                isError = showError
             )
 
-            if (!emailSent) {
-                // Campo de Email
-                OutlinedTextField(
-                    value = email,
-                    onValueChange = {
-                        email = it
-                        showError = false
-                        showSuccess = false
-                    },
-                    label = { Text("Email") },
-                    leadingIcon = {
-                        Icon(Icons.Default.Email, contentDescription = "Email")
-                    },
-                    trailingIcon = {
-                        if (email.isNotEmpty()) {
-                            IconButton(onClick = { email = "" }) {
-                                Icon(
-                                    Icons.Default.Clear,
-                                    contentDescription = "Limpiar"
-                                )
-                            }
-                        }
-                    },
-                    keyboardOptions = KeyboardOptions(
-                        keyboardType = KeyboardType.Email
-                    ),
-                    singleLine = true,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(bottom = 16.dp),
-                    shape = RoundedCornerShape(12.dp),
-                    isError = showError,
-                    enabled = !isLoading
-                )
+            Spacer(modifier = Modifier.height(12.dp))
 
-                // Mensaje de error o éxito
-                AnimatedVisibility(
-                    visible = showError || showSuccess,
-                    enter = fadeIn(),
-                    exit = fadeOut()
-                ) {
-                    Card(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(bottom = 16.dp),
-                        colors = CardDefaults.cardColors(
-                            containerColor = if (showSuccess)
-                                MaterialTheme.colorScheme.primaryContainer
-                            else
-                                MaterialTheme.colorScheme.errorContainer
-                        )
-                    ) {
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(12.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Icon(
-                                imageVector = if (showSuccess)
-                                    Icons.Default.CheckCircle
-                                else
-                                    Icons.Default.Error,
-                                contentDescription = null,
-                                tint = if (showSuccess)
-                                    MaterialTheme.colorScheme.primary
-                                else
-                                    MaterialTheme.colorScheme.error
-                            )
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text(
-                                text = message,
-                                fontSize = 14.sp,
-                                color = if (showSuccess)
-                                    MaterialTheme.colorScheme.onPrimaryContainer
-                                else
-                                    MaterialTheme.colorScheme.onErrorContainer
-                            )
-                        }
+            OutlinedTextField(
+                value = newPassword,
+                onValueChange = { newPassword = it; showError = false; showSuccess = false },
+                label = { Text("Nueva contraseña") },
+                leadingIcon = { Icon(Icons.Default.Lock, contentDescription = null) },
+                trailingIcon = {
+                    IconButton(onClick = { showPassword = !showPassword }) {
+                        Icon(if (showPassword) Icons.Default.VisibilityOff else Icons.Default.Visibility, null)
                     }
-                }
+                },
+                visualTransformation = if (showPassword) VisualTransformation.None else PasswordVisualTransformation(),
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
+                singleLine = true,
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(12.dp),
+                isError = showError
+            )
 
-                // Botón de Enviar
-                Button(
-                    onClick = {
-                        // Validación
-                        when {
-                            email.isEmpty() -> {
-                                showError = true
-                                showSuccess = false
-                                message = "Por favor ingresa tu email"
-                            }
-                            !email.contains("@") || !email.contains(".") -> {
-                                showError = true
-                                showSuccess = false
-                                message = "Por favor ingresa un email válido"
-                            }
-                            else -> {
-                                // Simular envío de email
-                                isLoading = true
-                                coroutineScope.launch {
-                                    delay(2000)
-                                    isLoading = false
-                                    showError = false
-                                    showSuccess = true
-                                    message = "Se han enviado las instrucciones a tu email"
-                                    delay(1500)
-                                    emailSent = true
+            Spacer(modifier = Modifier.height(16.dp))
+
+            AnimatedVisibility(visible = showError || showSuccess, enter = fadeIn(), exit = fadeOut()) {
+                Text(
+                    text = message,
+                    color = if (showSuccess) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error,
+                    fontSize = 14.sp,
+                    modifier = Modifier.fillMaxWidth(),
+                    textAlign = TextAlign.Center
+                )
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            Button(
+                onClick = {
+                    when {
+                        email.isBlank() -> {
+                            showError = true
+                            message = "Debes ingresar tu email"
+                        }
+                        newPassword.length < 6 -> {
+                            showError = true
+                            message = "La contraseña debe tener al menos 6 caracteres"
+                        }
+                        else -> {
+                            isLoading = true
+                            coroutineScope.launch {
+                                delay(1000)
+                                when (val res = authViewModel.resetPassword(email, newPassword)) {
+                                    is AuthResult.Ok -> {
+                                        isLoading = false
+                                        showSuccess = true
+                                        message = "Contraseña restablecida correctamente"
+                                        delay(1500)
+                                        onNavigateToLogin()
+                                    }
+                                    is AuthResult.Error -> {
+                                        isLoading = false
+                                        showError = true
+                                        message = res.message
+                                    }
                                 }
                             }
                         }
-                    },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(56.dp),
-                    shape = RoundedCornerShape(12.dp),
-                    enabled = email.isNotEmpty() && !isLoading
-                ) {
-                    if (isLoading) {
-                        CircularProgressIndicator(
-                            modifier = Modifier.size(24.dp),
-                            color = MaterialTheme.colorScheme.onPrimary
-                        )
-                    } else {
-                        Icon(
-                            Icons.AutoMirrored.Filled.Send,
-                            contentDescription = null,
-                            modifier = Modifier.padding(end = 8.dp)
-                        )
-                        Text(
-                            text = "Enviar Instrucciones",
-                            fontSize = 18.sp,
-                            fontWeight = FontWeight.Medium
-                        )
                     }
-                }
-            } else {
-                // Pantalla de confirmación
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(16.dp),
-                    colors = CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.secondaryContainer
+                },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(54.dp),
+                shape = RoundedCornerShape(12.dp),
+                enabled = !isLoading
+            ) {
+                if (isLoading) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(24.dp),
+                        color = MaterialTheme.colorScheme.onPrimary
                     )
-                ) {
-                    Column(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(20.dp),
-                        horizontalAlignment = Alignment.CenterHorizontally
-                    ) {
-                        Icon(
-                            Icons.Default.Info,
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.onSecondaryContainer,
-                            modifier = Modifier.size(24.dp)
-                        )
-                        Spacer(modifier = Modifier.height(12.dp))
-                        Text(
-                            text = "Revisa tu bandeja de entrada",
-                            fontWeight = FontWeight.Bold,
-                            fontSize = 16.sp,
-                            color = MaterialTheme.colorScheme.onSecondaryContainer
-                        )
-                        Spacer(modifier = Modifier.height(8.dp))
-                        Text(
-                            text = "Si no ves el correo, revisa tu carpeta de spam o correo no deseado",
-                            fontSize = 14.sp,
-                            textAlign = TextAlign.Center,
-                            color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.8f)
-                        )
-                    }
-                }
-
-                Spacer(modifier = Modifier.height(24.dp))
-
-                // Botón para abrir app de email (simulado)
-                OutlinedButton(
-                    onClick = { /* Abrir app de email */ },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(56.dp),
-                    shape = RoundedCornerShape(12.dp)
-                ) {
-                    Icon(
-                        Icons.Default.Email,
-                        contentDescription = null,
-                        modifier = Modifier.padding(end = 8.dp)
-                    )
-                    Text(
-                        text = "Abrir Email",
-                        fontSize = 16.sp
-                    )
+                } else {
+                    Icon(Icons.AutoMirrored.Filled.Send, contentDescription = null, modifier = Modifier.padding(end = 8.dp))
+                    Text("Restablecer", fontSize = 18.sp, fontWeight = FontWeight.Medium)
                 }
             }
 
-            Spacer(modifier = Modifier.height(24.dp))
+            Spacer(modifier = Modifier.height(16.dp))
 
-            // Botón de volver al login
             OutlinedButton(
                 onClick = onNavigateToLogin,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(56.dp),
+                    .height(54.dp),
                 shape = RoundedCornerShape(12.dp)
             ) {
-                Icon(
-                    Icons.AutoMirrored.Filled.Login,
-                    contentDescription = null,
-                    modifier = Modifier.padding(end = 8.dp)
-                )
-                Text(
-                    text = "Volver al Login",
-                    fontSize = 16.sp
-                )
-            }
-
-            Spacer(modifier = Modifier.weight(1f))
-
-            // Texto de ayuda adicional
-            Column(
-                horizontalAlignment = Alignment.CenterHorizontally,
-                modifier = Modifier.padding(vertical = 16.dp)
-            ) {
-                Text(
-                    text = "¿No recibiste el correo?",
-                    fontSize = 12.sp,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-                TextButton(
-                    onClick = {
-                        if (emailSent) {
-                            // Resetear para reenviar
-                            emailSent = false
-                            showSuccess = false
-                            message = ""
-                        }
-                    },
-                    enabled = emailSent
-                ) {
-                    Text(
-                        text = "Reenviar correo",
-                        fontSize = 14.sp
-                    )
-                }
-
-                Spacer(modifier = Modifier.height(8.dp))
-
-                Text(
-                    text = "¿Necesitas ayuda?",
-                    fontSize = 12.sp,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-                TextButton(onClick = { /* Abrir soporte */ }) {
-                    Text(
-                        text = "Contactar soporte",
-                        fontSize = 14.sp
-                    )
-                }
+                Icon(Icons.AutoMirrored.Filled.Login, contentDescription = null, modifier = Modifier.padding(end = 8.dp))
+                Text("Volver al Login", fontSize = 16.sp)
             }
         }
     }

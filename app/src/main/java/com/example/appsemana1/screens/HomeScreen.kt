@@ -67,6 +67,57 @@ data class DailyStats(
     val revenue: Int
 )
 
+/* ======================= UTILIDADES (EXCEPCIONES / INLINE / HOF / EXTENSIONES) ======================= */
+
+class InvalidPromotionException(message: String) : Exception(message)
+
+//Función inline que envuelve un bloque con try/catch y retorna un valor por defecto
+inline fun <T> safeOrDefault(
+    default: T,
+    crossinline onError: (Throwable) -> Unit = {}
+): (block: () -> T) -> T = { block ->
+    try {
+        block()
+    } catch (t: Throwable) {
+        onError(t)
+        default
+    }
+}
+
+//HOF para aplicar transformación condicional
+inline fun <T> List<T>.applyIf(
+    condition: Boolean,
+    transform: (List<T>) -> List<T>
+): List<T> = if (condition) transform(this) else this
+
+//Propiedad de extensión: precio final con promoción (lanza excepción si el descuento es inválido)
+val Service.finalPrice: Int
+    get() {
+        val d = promotion?.discount ?: return price
+        if (d !in 0..100) {
+            throw InvalidPromotionException("Descuento inválido ($d%) para el servicio: $name")
+        }
+        return (price * (100 - d)) / 100
+    }
+
+//Propiedad de extensión para Appointment, que indica si ya pasó la hora de la cita
+val Appointment.isPastNow: Boolean
+    get() = date == LocalDate.now() && time.isBefore(LocalTime.now())
+
+//Extensión de lista para ordenar por hora y tomar un límite
+fun List<Appointment>.sortedTakeByTime(limit: Int): List<Appointment> =
+    this.sortedBy { it.time }.take(limit)
+
+//Lambdas con etiqueta para contar promos válidas sin crashear si falta promoción
+fun countValidPromos(services: List<Service>): Int {
+    var count = 0
+    services.forEach svc@ { s ->
+        val p = s.promotion ?: return@svc
+        if (p.discount in 1..100) count++
+    }
+    return count
+}
+
 /* ======================= HOME ======================= */
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -93,12 +144,14 @@ fun HomeScreen(
     val services by remember {
         mutableStateOf(
             listOf(
-                Service("s1", "Corte de Cabello", 30, 15000,
+                Service(
+                    "s1", "Corte de Cabello", 30, 15000,
                     promotion = Promotion("p1", 20, "20% OFF este mes", LocalDate.now().plusDays(15))
                 ),
                 Service("s2", "Manicure", 45, 8000),
                 Service("s3", "Pedicure", 60, 12000),
-                Service("s4", "Masaje Relajante", 90, 25000,
+                Service(
+                    "s4", "Masaje Relajante", 90, 25000,
                     promotion = Promotion("p2", 15, "15% OFF nuevos clientes", LocalDate.now().plusDays(30))
                 ),
                 Service("s5", "Tratamiento Facial", 75, 20000)
@@ -260,7 +313,8 @@ private fun DashboardTab(
                             Triple("Citas Hoy", "${today.totalAppointments}", Icons.Default.Today),
                             Triple("Completadas", "${today.completedAppointments}", Icons.Default.CheckCircle),
                             Triple("Ingresos", formatCLP(today.revenue), Icons.Default.AttachMoney),
-                            Triple("Servicios", "${services.count { it.isActive }}", Icons.Default.MiscellaneousServices)
+                            Triple("Servicios", "${services.count { it.isActive }}", Icons.Default.MiscellaneousServices),
+                            Triple("Promos válidas", "${countValidPromos(services)}", Icons.Default.LocalOffer) // NUEVO
                         )
                     ) { (title, value, icon) ->
                         StatsCard(title, value, icon, multiplier)
@@ -273,7 +327,7 @@ private fun DashboardTab(
             Text("Próximas citas", fontSize = (20 * multiplier).sp, fontWeight = FontWeight.SemiBold)
         }
 
-        items(appointments.sortedBy { it.time }.take(5)) { appointment ->
+        items(appointments.sortedTakeByTime(5)) { appointment ->
             AppointmentCard(appointment, services, userRole, multiplier)
         }
 
@@ -336,6 +390,10 @@ private fun ServicesTab(
     services: List<Service>,
     multiplier: Float
 ) {
+    val listToShow = services.applyIf(userRole == UserRole.GUEST) { list ->
+        list.filter { it.isActive }   // para invitados, solo activos
+    }
+
     LazyColumn(
         modifier = Modifier
             .fillMaxSize()
@@ -356,7 +414,7 @@ private fun ServicesTab(
             }
         }
 
-        items(services.filter { it.isActive }) { svc ->
+        items(listToShow) { svc ->
             ServiceCard(svc, userRole, multiplier)
         }
     }
@@ -464,12 +522,11 @@ private fun ProfileTab(
             multiplier = multiplier
         )
 
-        // ⬇️ Acceso a SettingsScreen (demo de componentes UI)
         ProfileOptionItem(
             icon = Icons.Default.Code,
             title = "Componentes UI Demo",
             subtitle = "Inputs, botones, tablas, grillas, etc.",
-            onClick = onOpenSettings,                   // ⬅️ NAVEGA A SETTINGS
+            onClick = onOpenSettings,
             multiplier = multiplier
         )
     }
@@ -582,24 +639,31 @@ private fun ServiceCard(service: Service, userRole: UserRole, multiplier: Float)
                     Text("${service.duration} minutos", fontSize = (14 * multiplier).sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
 
+                val computeOrZero = safeOrDefault(default = 0) { /* pueds loguea si quiere */ }
+
                 Column(horizontalAlignment = Alignment.End) {
-                    if (service.promotion != null) {
+                    val hasPromo = service.promotion != null
+                    val basePrice = service.price
+                    val discountedPrice = computeOrZero {
+                        service.finalPrice //puede lanzar InvalidPromotionException si el descuento es inválido
+                    }
+
+                    if (hasPromo) {
                         Text(
-                            formatCLP(service.price),
+                            formatCLP(basePrice),
                             fontSize = (14 * multiplier).sp,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             style = TextStyle(textDecoration = TextDecoration.LineThrough)
                         )
-                        val discountPrice = (service.price * (100 - service.promotion.discount)) / 100
                         Text(
-                            formatCLP(discountPrice),
+                            formatCLP(discountedPrice),
                             fontSize = (18 * multiplier).sp,
                             fontWeight = FontWeight.Bold,
                             color = MaterialTheme.colorScheme.primary
                         )
                     } else {
                         Text(
-                            formatCLP(service.price),
+                            formatCLP(basePrice),
                             fontSize = (18 * multiplier).sp,
                             fontWeight = FontWeight.Bold,
                             color = MaterialTheme.colorScheme.primary

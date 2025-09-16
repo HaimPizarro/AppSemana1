@@ -1,9 +1,10 @@
 package com.example.appsemana1
 
-import androidx.compose.runtime.Composable
+import androidx.compose.runtime.*
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import com.example.appsemana1.auth.AuthViewModel
 import com.example.appsemana1.screens.ForgotPasswordScreen
 import com.example.appsemana1.screens.HomeScreen
 import com.example.appsemana1.screens.LoginScreen
@@ -21,21 +22,41 @@ object Routes {
 
 @Composable
 fun AppNavigation(
-    accessibilityViewModel: AccessibilityViewModel
+    accessibilityViewModel: AccessibilityViewModel,
+    authViewModel: AuthViewModel
 ) {
     val navController = rememberNavController()
+    val currentUser by authViewModel.currentUser
+    val start = if (currentUser == null) Routes.LOGIN else Routes.HOME
 
-    NavHost(navController = navController, startDestination = Routes.LOGIN) {
+    NavHost(navController = navController, startDestination = start) {
 
         composable(Routes.LOGIN) {
+            // Lee mensaje de éxito enviado desde Register
+            val successMsg = navController.currentBackStackEntry
+                ?.savedStateHandle
+                ?.get<String>("success_message")
+
+            // Limpia el mensaje para que no reaparezca
+            LaunchedEffect(successMsg) {
+                if (!successMsg.isNullOrBlank()) {
+                    navController.currentBackStackEntry
+                        ?.savedStateHandle
+                        ?.set("success_message", null)
+                }
+            }
+
             LoginScreen(
                 onNavigateToRegister = { navController.navigate(Routes.REGISTER) },
                 onNavigateToForgotPassword = { navController.navigate(Routes.FORGOT_PASSWORD) },
                 onLoginSuccess = {
-                    navController.popBackStack(Routes.LOGIN, inclusive = true)
-                    navController.navigate(Routes.HOME)
+                    navController.navigate(Routes.HOME) {
+                        popUpTo(Routes.LOGIN) { inclusive = true }
+                    }
                 },
-                accessibilityViewModel = accessibilityViewModel
+                accessibilityViewModel = accessibilityViewModel,
+                authViewModel = authViewModel,
+                initialSuccessMessage = successMsg // ⬅️ clave
             )
         }
 
@@ -43,10 +64,14 @@ fun AppNavigation(
             RegisterScreen(
                 onNavigateBack = { navController.navigateUp() },
                 onRegisterSuccess = {
-                    navController.popBackStack(Routes.REGISTER, inclusive = true)
-                    navController.navigate(Routes.LOGIN)
+                    // Escribe el mensaje en el back stack de destino (LOGIN)
+                    navController.previousBackStackEntry
+                        ?.savedStateHandle
+                        ?.set("success_message", "Cuenta creada correctamente")
+                    // Vuelve a Login
+                    navController.popBackStack()
                 },
-                accessibilityViewModel = accessibilityViewModel
+                authViewModel = authViewModel
             )
         }
 
@@ -54,30 +79,30 @@ fun AppNavigation(
             ForgotPasswordScreen(
                 onNavigateBack = { navController.navigateUp() },
                 onNavigateToLogin = {
-                    navController.popBackStack(Routes.FORGOT_PASSWORD, inclusive = true)
-                    navController.navigate(Routes.LOGIN)
+                    navController.navigate(Routes.LOGIN) {
+                        popUpTo(Routes.HOME) { inclusive = false }
+                    }
                 },
-                accessibilityViewModel = accessibilityViewModel
+                accessibilityViewModel = accessibilityViewModel,
+                authViewModel = authViewModel
             )
         }
 
         composable(Routes.HOME) {
             HomeScreen(
                 onLogout = {
-                    navController.popBackStack(Routes.HOME, inclusive = true)
-                    navController.navigate(Routes.LOGIN)
+                    authViewModel.logout()
+                    navController.navigate(Routes.LOGIN) {
+                        popUpTo(Routes.HOME) { inclusive = true }
+                    }
                 },
-                onOpenSettings = {
-                    navController.navigate(Routes.SETTINGS)
-                },
+                onOpenSettings = { navController.navigate(Routes.SETTINGS) },
                 accessibilityViewModel = accessibilityViewModel
             )
         }
 
         composable(Routes.SETTINGS) {
-            SettingsScreen(
-                onNavigateBack = { navController.navigateUp() }
-            )
+            SettingsScreen(onNavigateBack = { navController.navigateUp() })
         }
     }
 }

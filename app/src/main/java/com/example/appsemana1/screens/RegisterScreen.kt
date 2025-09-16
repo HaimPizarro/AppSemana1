@@ -1,392 +1,168 @@
 package com.example.appsemana1.screens
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.appsemana1.auth.AuthResult
+import com.example.appsemana1.auth.AuthViewModel
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun RegisterScreen(
     onNavigateBack: () -> Unit,
     onRegisterSuccess: () -> Unit,
-    accessibilityViewModel: com.example.appsemana1.ui.theme.AccessibilityViewModel
+    authViewModel: AuthViewModel
 ) {
-    var fullName by remember { mutableStateOf("") }
+    var name by remember { mutableStateOf("") }
     var email by remember { mutableStateOf("") }
-    var password by remember { mutableStateOf("") }
-    var confirmPassword by remember { mutableStateOf("") }
-    var passwordVisible by remember { mutableStateOf(false) }
-    var confirmPasswordVisible by remember { mutableStateOf(false) }
-    var acceptTerms by remember { mutableStateOf(false) }
+    var pass1 by remember { mutableStateOf("") }
+    var pass2 by remember { mutableStateOf("") }
+    var showPass by remember { mutableStateOf(false) }
     var showError by remember { mutableStateOf(false) }
     var errorMessage by remember { mutableStateOf("") }
-    var showSuccess by remember { mutableStateOf(false) }
 
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(MaterialTheme.colorScheme.background)
-    ) {
+    val colors = MaterialTheme.colorScheme
+    val haptics = LocalHapticFeedback.current
+
+    Box(Modifier.fillMaxSize().background(colors.background)) {
         Column(
-            modifier = Modifier
+            Modifier
                 .fillMaxSize()
                 .verticalScroll(rememberScrollState())
                 .padding(24.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center
         ) {
-            // Botón de volver
-            Row(
+            Icon(Icons.Default.PersonAdd, null, tint = colors.primary, modifier = Modifier.size(92.dp))
+            Spacer(Modifier.height(12.dp))
+            Text("Crear cuenta", fontSize = 28.sp, fontWeight = FontWeight.Bold, color = colors.primary)
+
+            Spacer(Modifier.height(16.dp))
+
+            OutlinedTextField(
+                value = name, onValueChange = { name = it },
+                label = { Text("Nombre") },
+                leadingIcon = { Icon(Icons.Default.Person, null) },
+                singleLine = true,
                 modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                IconButton(
-                    onClick = onNavigateBack
-                ) {
-                    Icon(
-                        Icons.AutoMirrored.Filled.ArrowBack,
-                        contentDescription = "Volver",
-                        tint = MaterialTheme.colorScheme.primary
-                    )
-                }
-                Text(
-                    text = "Volver",
-                    color = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.clickable { onNavigateBack() }
-                )
-            }
-
-            Spacer(modifier = Modifier.height(24.dp))
-
-            // Icono
-            Icon(
-                Icons.Default.AccountCircle,
-                contentDescription = "Registro",
-                modifier = Modifier
-                    .size(80.dp)
-                    .padding(bottom = 16.dp),
-                tint = MaterialTheme.colorScheme.primary
+                shape = RoundedCornerShape(12.dp)
             )
 
-            // Título
-            Text(
-                text = "Crear Cuenta",
-                fontSize = 28.sp,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.primary,
-                modifier = Modifier.padding(bottom = 8.dp)
-            )
+            Spacer(Modifier.height(8.dp))
 
-            Text(
-                text = "Completa los datos para registrarte",
-                fontSize = 14.sp,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.padding(bottom = 24.dp)
-            )
-
-            // Campo de Nombre Completo
             OutlinedTextField(
-                value = fullName,
-                onValueChange = {
-                    fullName = it
-                    showError = false
-                },
-                label = { Text("Nombre Completo") },
-                leadingIcon = {
-                    Icon(Icons.Default.Person, contentDescription = "Nombre")
-                },
-                keyboardOptions = KeyboardOptions(
-                    keyboardType = KeyboardType.Text
-                ),
-                singleLine = true,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(bottom = 12.dp),
-                shape = RoundedCornerShape(12.dp),
-                isError = showError && fullName.isEmpty()
-            )
-
-            // Campo de Email
-            OutlinedTextField(
-                value = email,
-                onValueChange = {
-                    email = it
-                    showError = false
-                },
+                value = email, onValueChange = { email = it },
                 label = { Text("Email") },
-                leadingIcon = {
-                    Icon(Icons.Default.Email, contentDescription = "Email")
-                },
-                keyboardOptions = KeyboardOptions(
-                    keyboardType = KeyboardType.Email
-                ),
+                leadingIcon = { Icon(Icons.Default.Email, null) },
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
                 singleLine = true,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(bottom = 12.dp),
-                shape = RoundedCornerShape(12.dp),
-                isError = showError && (!email.contains("@") || email.isEmpty())
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(12.dp)
             )
 
-            // Campo de Contraseña
+            Spacer(Modifier.height(8.dp))
+
             OutlinedTextField(
-                value = password,
-                onValueChange = {
-                    password = it
-                    showError = false
-                },
+                value = pass1, onValueChange = { pass1 = it },
                 label = { Text("Contraseña") },
-                leadingIcon = {
-                    Icon(Icons.Default.Lock, contentDescription = "Password")
-                },
+                leadingIcon = { Icon(Icons.Default.Lock, null) },
                 trailingIcon = {
-                    IconButton(onClick = { passwordVisible = !passwordVisible }) {
-                        Icon(
-                            imageVector = if (passwordVisible)
-                                Icons.Default.Visibility
-                            else
-                                Icons.Default.VisibilityOff,
-                            contentDescription = "Toggle password"
-                        )
+                    IconButton(onClick = { showPass = !showPass }) {
+                        Icon(if (showPass) Icons.Default.VisibilityOff else Icons.Default.Visibility, null)
                     }
                 },
-                visualTransformation = if (passwordVisible)
-                    VisualTransformation.None
-                else
-                    PasswordVisualTransformation(),
-                keyboardOptions = KeyboardOptions(
-                    keyboardType = KeyboardType.Password
-                ),
+                visualTransformation = if (showPass) VisualTransformation.None else PasswordVisualTransformation(),
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
                 singleLine = true,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(bottom = 12.dp),
-                shape = RoundedCornerShape(12.dp),
-                isError = showError && password.length < 6
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(12.dp)
             )
 
-            // Campo de Confirmar Contraseña
+            Spacer(Modifier.height(8.dp))
+
             OutlinedTextField(
-                value = confirmPassword,
-                onValueChange = {
-                    confirmPassword = it
-                    showError = false
-                },
-                label = { Text("Confirmar Contraseña") },
-                leadingIcon = {
-                    Icon(Icons.Default.Lock, contentDescription = "Confirm Password")
-                },
-                trailingIcon = {
-                    IconButton(onClick = { confirmPasswordVisible = !confirmPasswordVisible }) {
-                        Icon(
-                            imageVector = if (confirmPasswordVisible)
-                                Icons.Default.Visibility
-                            else
-                                Icons.Default.VisibilityOff,
-                            contentDescription = "Toggle confirm password"
-                        )
-                    }
-                },
-                visualTransformation = if (confirmPasswordVisible)
-                    VisualTransformation.None
-                else
-                    PasswordVisualTransformation(),
-                keyboardOptions = KeyboardOptions(
-                    keyboardType = KeyboardType.Password
-                ),
+                value = pass2, onValueChange = { pass2 = it },
+                label = { Text("Repetir contraseña") },
+                leadingIcon = { Icon(Icons.Default.Lock, null) },
+                visualTransformation = if (showPass) VisualTransformation.None else PasswordVisualTransformation(),
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
                 singleLine = true,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(bottom = 8.dp),
-                shape = RoundedCornerShape(12.dp),
-                isError = showError && (confirmPassword != password || confirmPassword.isEmpty())
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(12.dp)
             )
 
-            // Checkbox de términos y condiciones
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(vertical = 8.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Checkbox(
-                    checked = acceptTerms,
-                    onCheckedChange = { acceptTerms = it }
-                )
-                Text(
-                    text = "Acepto los términos y condiciones",
-                    fontSize = 14.sp,
-                    modifier = Modifier.clickable { acceptTerms = !acceptTerms }
-                )
-            }
-
-            // Mensaje de error
             if (showError) {
                 Card(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(vertical = 8.dp),
-                    colors = CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.errorContainer
-                    )
+                        .padding(top = 12.dp),
+                    colors = CardDefaults.cardColors(containerColor = colors.surface),
+                    border = BorderStroke(2.dp, colors.error)
                 ) {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(12.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Icon(
-                            Icons.Default.Error,
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.error,
-                            modifier = Modifier.size(20.dp)
-                        )
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text(
-                            text = errorMessage,
-                            fontSize = 14.sp,
-                            color = MaterialTheme.colorScheme.onErrorContainer
-                        )
+                    Row(Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
+                        Icon(Icons.Default.Error, null, tint = colors.error, modifier = Modifier.size(20.dp))
+                        Spacer(Modifier.width(8.dp))
+                        Text(errorMessage, color = colors.error, fontSize = 16.sp, fontWeight = FontWeight.Medium)
                     }
                 }
+            } else {
+                Spacer(Modifier.height(12.dp))
             }
 
-            // Mensaje de éxito
-            if (showSuccess) {
-                Card(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(vertical = 8.dp),
-                    colors = CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.primaryContainer
-                    )
-                ) {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(12.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Icon(
-                            Icons.Default.CheckCircle,
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.primary,
-                            modifier = Modifier.size(20.dp)
-                        )
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text(
-                            text = "¡Registro exitoso! Redirigiendo al login...",
-                            fontSize = 14.sp,
-                            color = MaterialTheme.colorScheme.onPrimaryContainer
-                        )
-                    }
-                }
-            }
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            // Botón de Registro
             Button(
                 onClick = {
-                    // Validación del formulario
+                    haptics.performHapticFeedback(HapticFeedbackType.LongPress)
                     when {
-                        fullName.isEmpty() -> {
-                            showError = true
-                            errorMessage = "Por favor ingresa tu nombre completo"
-                        }
-                        email.isEmpty() -> {
-                            showError = true
-                            errorMessage = "Por favor ingresa tu email"
-                        }
-                        !email.contains("@") -> {
-                            showError = true
-                            errorMessage = "Por favor ingresa un email válido"
-                        }
-                        password.isEmpty() -> {
-                            showError = true
-                            errorMessage = "Por favor ingresa una contraseña"
-                        }
-                        password.length < 6 -> {
-                            showError = true
-                            errorMessage = "La contraseña debe tener al menos 6 caracteres"
-                        }
-                        confirmPassword.isEmpty() -> {
-                            showError = true
-                            errorMessage = "Por favor confirma tu contraseña"
-                        }
-                        password != confirmPassword -> {
-                            showError = true
-                            errorMessage = "Las contraseñas no coinciden"
-                        }
-                        !acceptTerms -> {
-                            showError = true
-                            errorMessage = "Debes aceptar los términos y condiciones"
-                        }
+                        name.isBlank() -> { showError = true; errorMessage = "El nombre es obligatorio" }
+                        !email.contains("@") -> { showError = true; errorMessage = "Email inválido" }
+                        pass1.length < 6 -> { showError = true; errorMessage = "La contraseña debe tener al menos 6 caracteres" }
+                        pass1 != pass2 -> { showError = true; errorMessage = "Las contraseñas no coinciden" }
                         else -> {
-                            // Registro exitoso
-                            showError = false
-                            showSuccess = true
-                            errorMessage = ""
-                            // Esperar un momento y luego navegar
-                            onRegisterSuccess()
+                            when (val res = authViewModel.register(name.trim(), email.trim(), pass1)) {
+                                is AuthResult.Ok -> {
+                                    showError = false; errorMessage = ""
+                                    onRegisterSuccess()
+                                }
+                                is AuthResult.Error -> {
+                                    showError = true; errorMessage = res.message
+                                }
+                            }
                         }
                     }
                 },
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(56.dp),
-                shape = RoundedCornerShape(12.dp),
-                enabled = fullName.isNotEmpty() && email.isNotEmpty() &&
-                        password.isNotEmpty() && confirmPassword.isNotEmpty() && acceptTerms
-            ) {
-                Text(
-                    text = "Registrarse",
-                    fontSize = 18.sp,
-                    fontWeight = FontWeight.Medium
-                )
-            }
+                    .height(54.dp),
+                shape = RoundedCornerShape(12.dp)
+            ) { Text("Crear cuenta", fontSize = 18.sp, fontWeight = FontWeight.Medium) }
 
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(Modifier.height(12.dp))
 
-            // Texto de ya tienes cuenta
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.Center,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(
-                    text = "¿Ya tienes una cuenta? ",
-                    fontSize = 14.sp,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-                Text(
-                    text = "Iniciar Sesión",
-                    fontSize = 14.sp,
-                    color = MaterialTheme.colorScheme.primary,
-                    fontWeight = FontWeight.Bold,
-                    modifier = Modifier.clickable {
-                        onNavigateBack()
-                    }
-                )
-            }
-
-            Spacer(modifier = Modifier.height(24.dp))
+            OutlinedButton(
+                onClick = onNavigateBack,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(54.dp),
+                shape = RoundedCornerShape(12.dp)
+            ) { Text("Volver") }
         }
     }
 }
